@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, CalendarCheck2 } from "lucide-react";
-import { BARBEARIA, SERVICOS, PROFISSIONAIS, formatarPreco, formatarDuracao } from "@/data/agendamento-dados";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { BARBEARIA, SERVICOS, PROFISSIONAIS, formatarPreco } from "@/data/agendamento-dados";
 import { cn } from "@/lib/utils";
 import { StepIndicator } from "./StepIndicator";
 import { EtapaServicos } from "./steps/EtapaServicos";

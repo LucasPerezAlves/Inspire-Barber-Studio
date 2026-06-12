@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -238,12 +239,12 @@ export function AuthScreen() {
 
         {/* Back link */}
         <p className="text-center mt-6">
-          <a
+          <Link
             href="/"
             className="text-[11px] text-[#6B6760] hover:text-[#A8A49E] transition-colors tracking-wider uppercase"
           >
             ← Voltar para o início
-          </a>
+          </Link>
         </p>
       </div>
     </div>
