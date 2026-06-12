@@ -246,6 +246,14 @@ export function AuthScreen() {
             ← Voltar para o início
           </Link>
         </p>
+
+        {/* Atalho para o portal dos profissionais */}
+        <Link
+          href="/admin"
+          className="mt-3 text-xs font-medium text-neutral-500 hover:text-amber-500 tracking-wide transition-colors cursor-pointer block text-center"
+        >
+          Sou Profissional →
+        </Link>
       </div>
     </div>
   );
