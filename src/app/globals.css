@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+/* ─── Google Fonts ─────────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap");
+
+/* ─── Design Tokens ─────────────────────────────────────────────── */
+@theme {
+  /* Backgrounds */
+  --color-bg-void:    #0B0B0B;
+  --color-bg-deep:    #121212;
+  --color-bg-surface: #1A1A1A;
+  --color-bg-raised:  #242424;
+  --color-bg-subtle:  #2E2E2E;
+
+  /* Gold / Amber accents */
+  --color-gold-bright:  #E6C97A;
+  --color-gold:         #C9A84C;
+  --color-gold-muted:   #A07840;
+  --color-gold-dim:     #6B4F28;
+
+  /* Text */
+  --color-text-primary:   #F0EDE8;
+  --color-text-secondary: #A8A49E;
+  --color-text-muted:     #6B6760;
+
+  /* Borders */
+  --color-border-default: #2A2A2A;
+  --color-border-subtle:  #1E1E1E;
+  --color-border-gold:    #C9A84C40;
+
+  /* Typography */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body:    "Montserrat", system-ui, sans-serif;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* Shadows */
+  --shadow-gold: 0 0 24px 0 #C9A84C18;
+  --shadow-card: 0 4px 32px 0 #00000060;
+}
+
+/* ─── Shadcn/ui CSS variables (dark mode baseline) ──────────────── */
+:root {
+  --background:        11 11 11;
+  --foreground:        240 237 232;
+  --card:              26 26 26;
+  --card-foreground:   240 237 232;
+  --popover:           26 26 26;
+  --popover-foreground:240 237 232;
+  --primary:           201 168 76;
+  --primary-foreground:11 11 11;
+  --secondary:         36 36 36;
+  --secondary-foreground:240 237 232;
+  --muted:             36 36 36;
+  --muted-foreground:  168 164 158;
+  --accent:            201 168 76;
+  --accent-foreground: 11 11 11;
+  --destructive:       239 68 68;
+  --destructive-foreground: 240 237 232;
+  --border:            42 42 42;
+  --input:             42 42 42;
+  --ring:              201 168 76;
+  --radius:            4px;
+}
+
+/* ─── Base styles ───────────────────────────────────────────────── */
+* {
+  border-color: rgb(var(--border) / 1);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-bg-void);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background-color: #C9A84C30;
+  color: var(--color-gold-bright);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-subtle);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-muted);
+}
+
+/* ─── Typography helpers ────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.text-gold {
+  color: var(--color-gold);
+}
+
+.text-gold-bright {
+  color: var(--color-gold-bright);
+}
+
+/* ─── Gold gradient text ────────────────────────────────────────── */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #E6C97A 0%, #C9A84C 50%, #A07840 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Glassmorphism ─────────────────────────────────────────────── */
+.glass {
+  background: rgba(18, 18, 18, 0.72);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.12);
+}
+
+/* ─── Gold divider line ─────────────────────────────────────────── */
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #C9A84C60 30%, #C9A84C 50%, #C9A84C60 70%, transparent 100%);
+}
+
+/* ── Keyframe animations ─────────────────────────────────────── */
+@keyframes slideDown {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  30%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
