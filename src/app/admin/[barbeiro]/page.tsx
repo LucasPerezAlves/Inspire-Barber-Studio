@@ -1,5 +1,7 @@
 import { AdminPanel } from "./panel";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ barbeiro: string }>;
 }
