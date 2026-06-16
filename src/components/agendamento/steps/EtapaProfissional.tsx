@@ -1,10 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { UserRound } from "lucide-react";
-import { PROFISSIONAIS, type Profissional } from "@/data/agendamento-dados";
+import { UserRound, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase";
+
+interface Profissional {
+  id: string;
+  nome: string;
+  especialidade: string;
+  foto: string | null;
+}
+
+const QUALQUER: Profissional = {
+  id: "qualquer",
+  nome: "Qualquer Profissional",
+  especialidade: "Próximo disponível",
+  foto: null,
+};
 
 interface EtapaProfissionalProps {
   profissionalId: string;
@@ -12,6 +27,40 @@ interface EtapaProfissionalProps {
 }
 
 export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfissionalProps) {
+  const [profissionais, setProfissionais] = useState<Profissional[]>([QUALQUER]);
+  const [carregando,    setCarregando]    = useState(true);
+
+  useEffect(() => {
+    async function fetchProfissionais() {
+      try {
+        const { data, error } = await supabase
+          .from("profissionais")
+          .select("slug, nome, especialidade, foto_url")
+          .order("nome", { ascending: true });
+
+        if (error) {
+          console.error("[EtapaProfissional]", error.message);
+          return;
+        }
+
+        const lista: Profissional[] = (data ?? []).map((p) => ({
+          id:           p.slug,
+          nome:         p.nome,
+          especialidade: p.especialidade ?? "Barbeiro",
+          foto:         p.foto_url ?? null,
+        }));
+
+        setProfissionais([QUALQUER, ...lista]);
+      } catch (err) {
+        console.error("[EtapaProfissional] Erro inesperado:", err);
+      } finally {
+        setCarregando(false);
+      }
+    }
+
+    fetchProfissionais();
+  }, []);
+
   return (
     <div className="pt-2 pb-10">
       {/* Título */}
@@ -24,18 +73,35 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
         </p>
       </div>
 
-      {/* Mobile: 1 coluna (cards horizontais) | Desktop: 3 colunas (cards verticais) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        {PROFISSIONAIS.map((prof, i) => (
-          <BarberCard
-            key={prof.id}
-            profissional={prof}
-            selecionado={profissionalId === prof.id}
-            onSelecionar={onSelecionar}
-            delay={i * 0.08}
-          />
-        ))}
-      </div>
+      {carregando ? (
+        /* Skeleton de carregamento */
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex flex-row sm:flex-col items-center gap-4 sm:gap-3 p-4 border border-[#1A1A1A] bg-[#111111] animate-pulse"
+            >
+              <div className="w-20 h-20 sm:w-full sm:aspect-square bg-[#1A1A1A] shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-[#1A1A1A] rounded w-3/4" />
+                <div className="h-2 bg-[#1A1A1A] rounded w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {profissionais.map((prof, i) => (
+            <BarberCard
+              key={prof.id}
+              profissional={prof}
+              selecionado={profissionalId === prof.id}
+              onSelecionar={onSelecionar}
+              delay={i * 0.08}
+            />
+          ))}
+        </div>
+      )}
 
       <p className="text-center text-[10px] text-[#6B6760] mt-8 tracking-wider uppercase">
         A seleção avança automaticamente
@@ -65,8 +131,6 @@ function BarberCard({
       transition={{ duration: 0.35, delay, ease: "easeOut" }}
       onClick={() => onSelecionar(profissional.id)}
       className={cn(
-        /* Mobile: horizontal (foto à esq, texto à dir) */
-        /* Desktop: vertical (foto em cima, texto embaixo) */
         "group flex flex-row sm:flex-col items-center gap-4 sm:gap-3",
         "p-4 w-full text-left sm:text-center",
         "border transition-all duration-300",
@@ -76,7 +140,7 @@ function BarberCard({
           : "border-[#1E1E1E] bg-[#111111] hover:border-[#C9A84C40] hover:bg-[#141414]"
       )}
     >
-      {/* Foto / ícone — quadrada fixa no mobile, aspect-square no desktop */}
+      {/* Foto / ícone */}
       <div
         className={cn(
           "relative shrink-0 overflow-hidden",
@@ -85,7 +149,7 @@ function BarberCard({
           selecionado && "ring-2 ring-[#C9A84C] ring-offset-2 ring-offset-[#0B0B0B]"
         )}
       >
-        {isQualquer || profissional.foto === null ? (
+        {isQualquer || !profissional.foto ? (
           <div className="w-full h-full bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] border border-[#2A2A2A] flex items-center justify-center">
             <UserRound
               className={cn(
@@ -105,7 +169,6 @@ function BarberCard({
           />
         )}
 
-        {/* Overlay selecionado */}
         {selecionado && (
           <motion.div
             initial={{ opacity: 0 }}

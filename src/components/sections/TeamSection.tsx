@@ -9,14 +9,16 @@ const TEAM = [
     role: "Sócio-Fundador & Barbeiro",
     specialty: "Corte Degradê · Fade · Estilo Moderno",
     foto: "https://firebasestorage.googleapis.com/v0/b/marcaai-a6efb.appspot.com/o/profileBarber%2FgJImKl5pipbmAT8l7eF0RRAB1Ic2.jpeg?alt=media&token=501a651f-9fa4-4795-9f98-8a972bb4a32e",
-    instagram: "https://www.instagram.com/inspire.barberstudio/",
+    instagram: "https://www.instagram.com/pablodabarbearia/",
+    instagramHandle: "@pablodabarbearia",
   },
   {
     name: "Altamiro Peixer",
     role: "Barbeiro Especialista",
     specialty: "Barba · Navalha · Transformações",
     foto: "https://firebasestorage.googleapis.com/v0/b/marcaai-a6efb.appspot.com/o/profileBarber%2F5TZOPLMrnfZ4mEaAAHeu4XmsytK2.jpeg?alt=media&token=696818be-fc46-4680-8819-d8d206fe85ed",
-    instagram: "https://www.instagram.com/inspire.barberstudio/",
+    instagram: "https://www.instagram.com/altamiropeixer/",
+    instagramHandle: "@altamiropeixer",
   },
 ] as const;
 
@@ -140,7 +142,7 @@ function BarberCard({ member }: { member: (typeof TEAM)[number] }) {
             )}
           >
             <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
-            @inspire.barberstudio
+            {member.instagramHandle}
           </Link>
         </div>
       </div>
