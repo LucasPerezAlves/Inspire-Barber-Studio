@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { BARBEARIA, SERVICOS, PROFISSIONAIS, formatarPreco } from "@/data/agendamento-dados";
+import { sanitizeText, sanitizePhone } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
 import { StepIndicator } from "./StepIndicator";
 import { EtapaServicos } from "./steps/EtapaServicos";
@@ -117,8 +118,12 @@ export function AgendamentoFlow() {
   const totalDuracao = servicosObj.reduce((acc, s) => acc + s.duracao, 0);
   const profissional = PROFISSIONAIS.find((p) => p.id === state.profissionalId);
 
-  /* ─── Tela de confirmação ───────────────────────────────────── */
+  /* ─── Tela de confirmação — "wow" effect ────────────────────────── */
   if (confirmado) {
+    /* Sanitiza antes de embeddar na mensagem — defesa XSS */
+    const nomeSeguro = sanitizeText(state.nome);
+    const foneSeguro = sanitizePhone(state.whatsapp);
+
     const msgWhatsApp = [
       `Olá! Gostaria de confirmar meu agendamento:`,
       ``,
@@ -128,59 +133,137 @@ export function AgendamentoFlow() {
       `*Horário:* ${state.horario}`,
       `*Total:* ${formatarPreco(totalPreco)}`,
       ``,
-      `Nome: ${state.nome}`,
-      `WhatsApp: ${state.whatsapp}`,
+      `Nome: ${nomeSeguro}`,
+      `WhatsApp: ${foneSeguro}`,
     ].join("\n");
 
     const waUrl = `https://wa.me/${BARBEARIA.whatsapp}?text=${encodeURIComponent(msgWhatsApp)}`;
 
+    const staggerContainer = {
+      hidden: {},
+      show:   { transition: { staggerChildren: 0.09, delayChildren: 0.55 } },
+    };
+    const staggerItem = {
+      hidden: { opacity: 0, y: 16 },
+      show:   { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
+    };
+
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="min-h-[60vh] flex flex-col items-center justify-center px-6 py-16 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="min-h-[70vh] flex flex-col items-center justify-start px-5 pt-10 pb-20"
       >
-        <div className="w-16 h-16 rounded-full bg-[#C9A84C10] border border-[#C9A84C30] flex items-center justify-center mb-6">
-          <CheckCircle2 className="w-8 h-8 text-[#C9A84C]" strokeWidth={1.5} />
-        </div>
-        <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[#F0EDE8] mb-3">
-          Agendamento Enviado!
-        </h2>
-        <p className="text-[#A8A49E] text-sm leading-relaxed max-w-sm mb-8">
-          Clique abaixo para confirmar via WhatsApp. Nossa equipe vai retornar em instantes.
-        </p>
-
-        {/* Resumo card */}
-        <div className="w-full max-w-sm bg-[#121212] border border-[#2A2A2A] p-5 mb-8 text-left space-y-3">
-          {servicosObj.map((s) => (
-            <div key={s.id} className="flex items-center justify-between text-sm">
-              <span className="text-[#A8A49E]">{s.nome}</span>
-              <span className="text-[#C9A84C] font-semibold">{formatarPreco(s.preco)}</span>
-            </div>
-          ))}
-          <div className="divider-gold" />
-          <div className="flex items-center justify-between">
-            <span className="text-[#F0EDE8] font-semibold">Total</span>
-            <span className="font-display text-xl text-[#C9A84C] font-semibold">{formatarPreco(totalPreco)}</span>
-          </div>
-          <div className="text-xs text-[#6B6760] flex items-center gap-4 pt-1">
-            <span>{state.data?.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) ?? ""} às {state.horario}</span>
-            <span>{profissional?.nome}</span>
-          </div>
-        </div>
-
-        <a href={waUrl} target="_blank" rel="noopener noreferrer" className="w-full max-w-sm">
-          <button className="w-full py-4 text-sm font-semibold tracking-[0.15em] uppercase text-[#0B0B0B] bg-[#C9A84C] hover:bg-[#E6C97A] hover:shadow-[0_0_32px_0_#C9A84C40] transition-all duration-300 active:scale-[0.98]">
-            Confirmar no WhatsApp
-          </button>
-        </a>
-        <button
-          onClick={() => { setConfirmado(false); setEtapa(1); setState({ servicosSelecionados: [], profissionalId: "qualquer", data: undefined, horario: null, nome: "", whatsapp: "" }); }}
-          className="mt-4 text-xs text-[#6B6760] hover:text-[#A8A49E] transition-colors"
+        {/* Check circle com glow pulsante */}
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 280, damping: 22, delay: 0.1 }}
+          className="relative mb-8"
         >
-          Novo agendamento
-        </button>
+          <motion.div
+            animate={{ boxShadow: ["0 0 0 0 #C9A84C40", "0 0 0 28px #C9A84C00"] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
+            className="w-20 h-20 rounded-full bg-[#C9A84C0D] border border-[#C9A84C30] flex items-center justify-center"
+          >
+            <CheckCircle2 className="w-9 h-9 text-[#C9A84C]" strokeWidth={1.5} />
+          </motion.div>
+        </motion.div>
+
+        {/* Título */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center mb-6"
+        >
+          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[#F0EDE8] mb-2">
+            Agendamento Enviado!
+          </h2>
+          <p className="font-mono text-[11px] text-[#6B6760] tracking-wide leading-relaxed">
+            Confirme pelo WhatsApp — respondemos em instantes
+          </p>
+        </motion.div>
+
+        {/* Divisor dourado */}
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.45, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
+          className="w-16 h-px bg-[#C9A84C] mb-7"
+        />
+
+        {/* Cards de detalhes em stagger */}
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="w-full max-w-sm space-y-2 mb-8"
+        >
+          {servicosObj.map((s) => (
+            <motion.div
+              key={s.id}
+              variants={staggerItem}
+              className="flex items-center justify-between px-4 py-3 bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl"
+            >
+              <span className="text-sm text-[#A8A49E]">{s.nome}</span>
+              <span className="text-sm text-[#C9A84C] font-semibold tabular-nums">
+                {formatarPreco(s.preco)}
+              </span>
+            </motion.div>
+          ))}
+
+          <motion.div
+            variants={staggerItem}
+            className="flex items-center justify-between px-4 py-3 bg-[#C9A84C0A] border border-[#C9A84C20] rounded-xl"
+          >
+            <span className="font-mono text-[10px] tracking-[0.25em] uppercase text-[#C9A84C]">Total</span>
+            <span className="font-display text-xl font-semibold text-[#C9A84C]">
+              {formatarPreco(totalPreco)}
+            </span>
+          </motion.div>
+
+          <motion.div variants={staggerItem} className="grid grid-cols-2 gap-2">
+            <div className="px-4 py-3 bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl">
+              <p className="font-mono text-[9px] text-[#3A3A3A] tracking-wider uppercase mb-1">Data &amp; Hora</p>
+              <p className="text-xs text-[#A8A49E] leading-snug">
+                {state.data?.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} às {state.horario}
+              </p>
+            </div>
+            <div className="px-4 py-3 bg-[#0F0F0F] border border-[#1A1A1A] rounded-xl">
+              <p className="font-mono text-[9px] text-[#3A3A3A] tracking-wider uppercase mb-1">Profissional</p>
+              <p className="text-xs text-[#A8A49E] leading-snug truncate">{profissional?.nome ?? "Qualquer"}</p>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* CTA WhatsApp com fluid fill */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.95, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-sm space-y-3"
+        >
+          <a href={waUrl} target="_blank" rel="noopener noreferrer" className="block">
+            <button className="group relative h-14 w-full overflow-hidden border border-[#C9A84C] font-mono text-sm font-bold tracking-[0.2em] uppercase transition-all duration-300">
+              <span className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" />
+              <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300">
+                Confirmar no WhatsApp
+              </span>
+            </button>
+          </a>
+          <button
+            onClick={() => {
+              setConfirmado(false);
+              setEtapa(1);
+              setState({ servicosSelecionados: [], profissionalId: "qualquer", data: undefined, horario: null, nome: "", whatsapp: "" });
+            }}
+            className="w-full text-center text-xs text-[#3A3A3A] hover:text-[#6B6760] transition-colors"
+          >
+            Fazer novo agendamento
+          </button>
+        </motion.div>
       </motion.div>
     );
   }

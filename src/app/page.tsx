@@ -1,53 +1,59 @@
 import Link from "next/link";
-import { HeroSection } from "@/components/sections/HeroSection";
+import { ArrowRight } from "lucide-react";
+import { HeroSection }    from "@/components/sections/HeroSection";
 import { ServicesSection } from "@/components/sections/ServicesSection";
-import { TeamSection } from "@/components/sections/TeamSection";
-import { AboutSection } from "@/components/sections/AboutSection";
+import { BrandTicker }    from "@/components/sections/BrandTicker";
+import { TeamSection }    from "@/components/sections/TeamSection";
+import { AboutSection }   from "@/components/sections/AboutSection";
 
 export default function Home() {
   return (
     <>
+      {/* 01 — Hero cinematográfico */}
       <HeroSection />
 
-      {/* Gold section divider */}
-      <div className="divider-gold" />
-
+      {/* 02 — Carrossel de serviços arrastável */}
       <ServicesSection />
 
-      <div className="divider-gold" />
+      {/* Ticker de marcas — separador imersivo */}
+      <BrandTicker />
 
+      {/* 03 — Equipe com hover overlay */}
       <TeamSection />
 
-      <div className="divider-gold" />
-
+      {/* 04 — Sobre */}
       <AboutSection />
 
-      {/* Agendamento placeholder */}
+      {/* 05 — Agendamento */}
       <section
         id="agendamento"
         className="relative bg-[#0B0B0B] py-24 lg:py-32 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,#C9A84C08_0%,transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,#C9A84C06_0%,transparent_70%)]" />
+
         <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
-          <span className="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.35em] uppercase text-[#C9A84C]">
-            <span className="w-5 h-px bg-[#C9A84C]" />
-            Agendamento Online
-            <span className="w-5 h-px bg-[#C9A84C]" />
+          <span className="block font-mono text-[10px] tracking-[0.42em] uppercase text-[#C9A84C] mb-6">
+            05 — Agendamento
           </span>
 
-          <h2 className="font-display text-4xl sm:text-5xl font-light text-[#F0EDE8] mt-4 mb-4">
-            Reserve o seu horário
+          <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light text-[#F0EDE8] mt-2 mb-5 leading-[0.95]">
+            Reserve o seu{" "}
+            <span className="font-semibold italic text-gradient-gold">horário</span>
           </h2>
 
-          <p className="text-[#6B6760] text-sm sm:text-base mb-10">
+          <p className="font-mono text-[11px] text-[#6B6760] tracking-wide leading-relaxed mb-10 max-w-sm mx-auto">
             Escolha o serviço, o profissional e o horário. Rápido, fácil e sem sair de casa.
           </p>
 
           <Link
             href="/agendar"
-            className="inline-flex items-center justify-center px-10 py-4 text-sm font-semibold tracking-[0.2em] uppercase text-[#0B0B0B] bg-[#C9A84C] hover:bg-[#E6C97A] hover:shadow-[0_0_40px_0_#C9A84C45] transition-all duration-300 active:scale-[0.97]"
+            className="group relative inline-flex items-center gap-3 overflow-hidden px-10 py-4 text-sm font-semibold tracking-[0.2em] uppercase border border-[#C9A84C]"
           >
-            Agendar Online
+            <span className="absolute inset-0 bg-[#C9A84C] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]" />
+            <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300">
+              Agendar Online
+            </span>
+            <ArrowRight className="relative z-10 w-4 h-4 text-[#C9A84C] group-hover:text-[#0B0B0B] group-hover:translate-x-1 transition-all duration-300" strokeWidth={2} />
           </Link>
         </div>
       </section>

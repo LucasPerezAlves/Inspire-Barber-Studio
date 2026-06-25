@@ -7,12 +7,6 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { supabase, supabaseConfigurado } from "@/lib/supabase";
 
-/* ─── Normaliza qualquer formato de foto vindo do banco ───────────
-   Suporta:
-   - URL completa já salva pelo getPublicUrl()
-   - Apenas o nome do arquivo: "photo.jpg"
-   - Caminho relativo com bucket: "barbeiros-fotos/photo.jpg"
-──────────────────────────────────────────────────────────────────── */
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/barbeiros-fotos`;
 
@@ -104,14 +98,14 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
   const conteudo = () => {
     if (carregando) {
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 p-4 sm:p-0 border border-[#1A1A1A] bg-[#111111] overflow-hidden animate-pulse"
+              className="rounded-xl border border-[#1A1A1A] bg-[#0F0F0F] overflow-hidden animate-pulse"
             >
-              <div className="w-20 h-20 sm:w-full sm:h-52 bg-[#1A1A1A] shrink-0" />
-              <div className="flex-1 sm:flex-none sm:w-full sm:px-4 sm:py-3 space-y-2">
+              <div className="w-full h-44 sm:h-52 bg-[#1A1A1A]" />
+              <div className="px-4 py-3 space-y-2">
                 <div className="h-3 bg-[#1A1A1A] rounded w-3/4" />
                 <div className="h-2 bg-[#1A1A1A] rounded w-1/2" />
               </div>
@@ -128,7 +122,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center justify-center py-12 gap-4 text-center"
         >
-          <div className="w-12 h-12 flex items-center justify-center bg-[#1A1A1A] border border-[#2A2A2A]">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-[#1A1A1A] border border-[#2A2A2A]">
             <WifiOff className="w-5 h-5 text-[#6B6760]" strokeWidth={1.5} />
           </div>
           <div>
@@ -140,7 +134,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
           <button
             onClick={handleRetry}
             className={cn(
-              "flex items-center gap-2 px-4 py-2",
+              "flex items-center gap-2 px-4 py-2 rounded-lg",
               "border border-[#2A2A2A] text-[#6B6760]",
               "text-[11px] font-semibold tracking-wider uppercase",
               "hover:border-[#C9A84C40] hover:text-[#C9A84C]",
@@ -164,14 +158,14 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {profissionais.map((prof, i) => (
           <BarberCard
             key={prof.id}
             profissional={prof}
             selecionado={profissionalId === prof.id}
             onSelecionar={onSelecionar}
-            delay={i * 0.08}
+            delay={i * 0.07}
           />
         ))}
       </div>
@@ -199,7 +193,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
       {conteudo()}
 
       {!erro && (
-        <p className="text-center text-[10px] text-[#6B6760] mt-8 tracking-wider uppercase">
+        <p className="text-center text-[10px] text-[#3A3A3A] mt-8 tracking-wider uppercase">
           A seleção avança automaticamente
         </p>
       )}
@@ -230,17 +224,17 @@ function BarberCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay, ease: "easeOut" }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
       onClick={() => onSelecionar(profissional.id)}
       className={cn(
-        "group w-full overflow-hidden",
-        // Mobile: linha com padding geral
+        "group w-full overflow-hidden rounded-xl backdrop-blur-sm",
         "flex flex-row items-center gap-4 p-4",
-        // Desktop: coluna, sem padding externo — foto vai de borda a borda
         "sm:flex-col sm:gap-0 sm:p-0 sm:text-center",
-        "border transition-all duration-300 active:scale-[0.97]",
+        "border transition-all duration-300",
         selecionado
-          ? "border-[#C9A84C] bg-[#C9A84C08] shadow-[0_0_20px_0_#C9A84C20]"
-          : "border-[#1E1E1E] bg-[#111111] hover:border-[#C9A84C40] hover:bg-[#141414]"
+          ? "border-[#C9A84C60] bg-[#C9A84C06] shadow-[0_0_24px_#C9A84C20]"
+          : "border-[#1E1E1E] bg-[#0F0F0F]/80 hover:border-[#C9A84C30] hover:bg-[#131313]/80"
       )}
     >
       {/* Foto / ícone ─────────────────────────────────────────────
@@ -252,10 +246,8 @@ function BarberCard({
       <div
         className={cn(
           "relative shrink-0 overflow-hidden",
-          "w-20 h-20",
-          // ring de seleção apenas no mobile (desktop usa a borda do card)
-          selecionado && "ring-2 ring-[#C9A84C] ring-offset-2 ring-offset-[#0B0B0B] sm:ring-0 sm:ring-offset-0",
-          // desktop: largura 100%, altura fixa
+          "w-20 h-20 rounded-lg sm:rounded-none",
+          selecionado && "ring-2 ring-[#C9A84C60] ring-offset-2 ring-offset-[#0B0B0B] sm:ring-0 sm:ring-offset-0",
           "sm:w-full sm:h-52",
         )}
       >
@@ -273,7 +265,7 @@ function BarberCard({
             <UserRound
               className={cn(
                 "w-1/3 h-1/3 transition-colors duration-300",
-                selecionado ? "text-[#C9A84C]" : "text-[#2A2A2A] group-hover:text-[#4A4A4A]"
+                selecionado ? "text-[#C9A84C]" : "text-[#2A2A2A] group-hover:text-[#3A3A3A]"
               )}
               strokeWidth={1}
             />
@@ -299,7 +291,7 @@ function BarberCard({
         >
           {profissional.nome}
         </p>
-        <p className="text-[11px] text-[#6B6760] mt-0.5 leading-tight">
+        <p className="text-[10px] text-[#6B6760] mt-0.5">
           {profissional.especialidade}
         </p>
       </div>

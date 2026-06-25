@@ -114,7 +114,7 @@ export function EtapaIdentificacao({
       </div>
 
       {/* ── Resumo do agendamento ────────────────────────────────── */}
-      <div className="bg-[#111111] border border-[#1E1E1E] mb-6 overflow-hidden">
+      <div className="bg-[#0F0F0F]/80 backdrop-blur-sm border border-[#1E1E1E] mb-6 overflow-hidden rounded-xl">
         <div className="px-4 py-3 border-b border-[#1A1A1A] flex items-center gap-2">
           <CheckCircle2 className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={2} />
           <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#6B6760]">
@@ -135,11 +135,11 @@ export function EtapaIdentificacao({
             ))}
           </div>
 
-          <div className="divider-gold opacity-50" />
+          <div className="h-px bg-[#C9A84C30]" />
 
           {/* Totais */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-2.5">
+            <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg p-2.5">
               <span className="block text-[9px] text-[#6B6760] tracking-wider uppercase mb-0.5">
                 Total
               </span>
@@ -147,7 +147,7 @@ export function EtapaIdentificacao({
                 {formatarPreco(totalPreco)}
               </span>
             </div>
-            <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-2.5">
+            <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-lg p-2.5">
               <span className="block text-[9px] text-[#6B6760] tracking-wider uppercase mb-0.5">
                 Duração
               </span>
@@ -246,7 +246,7 @@ export function EtapaIdentificacao({
                     onBlur={() => setTouched((t) => ({ ...t, nome: true }))}
                     placeholder="Ex: João da Silva"
                     className={cn(
-                      "w-full bg-[#111111] pl-10 pr-4 py-4 sm:py-3.5",
+                      "w-full bg-[#0F0F0F] pl-10 pr-4 py-4 sm:py-3.5 rounded-lg",
                       "text-[16px] sm:text-sm text-[#F0EDE8] placeholder:text-[#3A3A3A]",
                       "border outline-none transition-all duration-200",
                       erroNome
@@ -295,7 +295,7 @@ export function EtapaIdentificacao({
                     placeholder="(47) 99999-9999"
                     maxLength={16}
                     className={cn(
-                      "w-full bg-[#111111] pl-10 pr-4 py-4 sm:py-3.5",
+                      "w-full bg-[#0F0F0F] pl-10 pr-4 py-4 sm:py-3.5 rounded-lg",
                       "text-[16px] sm:text-sm text-[#F0EDE8] placeholder:text-[#3A3A3A]",
                       "border outline-none transition-all duration-200",
                       erroWhatsapp
@@ -332,14 +332,14 @@ export function EtapaIdentificacao({
           )}
         </AnimatePresence>
 
-        {/* ── Botão de confirmação ─────────────────────────────── */}
+        {/* ── Botão de confirmação h-14 ────────────────────────── */}
         <button
           type="submit"
           className={cn(
-            "w-full mt-2 py-4 text-sm font-semibold tracking-[0.15em] uppercase",
+            "h-14 w-full mt-2 font-mono text-sm font-bold tracking-[0.2em] uppercase",
             "transition-all duration-300",
             podeConfirmar
-              ? "text-[#0B0B0B] bg-[#C9A84C] hover:bg-[#E6C97A] hover:shadow-[0_0_32px_0_#C9A84C40] active:scale-[0.98]"
+              ? "text-[#0B0B0B] bg-amber-500 hover:bg-amber-400 hover:shadow-[0_0_32px_0_#C9A84C50] active:scale-[0.98]"
               : "text-[#6B6760] bg-[#1A1A1A] cursor-not-allowed"
           )}
         >
@@ -366,7 +366,7 @@ function IdentidadeCard({
   const phone    = digitsToMask(session.whatsapp);
 
   return (
-    <div className="bg-[#0D0D0D] border border-[#C9A84C20] overflow-hidden">
+    <div className="bg-[#0D0D0D]/80 backdrop-blur-sm border border-[#C9A84C20] overflow-hidden rounded-xl">
 
       {/* Banner de confirmação automática */}
       <div className="flex items-center gap-2.5 px-4 py-2.5 bg-[#C9A84C08] border-b border-[#C9A84C15]">
@@ -381,7 +381,7 @@ function IdentidadeCard({
         {/* Avatar com iniciais */}
         <div
           className={cn(
-            "w-12 h-12 shrink-0 flex items-center justify-center",
+            "w-12 h-12 shrink-0 flex items-center justify-center rounded-lg",
             "bg-[#C9A84C12] border border-[#C9A84C30]",
             "font-display text-lg font-semibold text-[#C9A84C]"
           )}

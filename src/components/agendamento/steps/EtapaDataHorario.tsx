@@ -1,26 +1,21 @@
 "use client";
 
-import { ptBR } from "date-fns/locale";
+import { useMemo } from "react";
 import { Clock } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
 import { getHorariosDisponiveis, BARBEARIA } from "@/data/agendamento-dados";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
-interface EtapaDataHorarioProps {
-  data: Date | undefined;
-  horario: string | null;
-  onDataChange: (data: Date | undefined) => void;
-  onHorarioChange: (horario: string) => void;
-  onAvancar: () => void;
-}
+/* ─── Labels locais para dia/mês ─────────────────────────────────── */
+const DIA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
+const MES_CURTO = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"] as const;
 
-/** Dias desabilitados: passado, domingo (0), segunda (1) */
-function isDiaDesabilitado(dia: Date): boolean {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const dow = dia.getDay();
-  return dia < hoje || !BARBEARIA.diasFuncionamento.includes(dow);
+interface EtapaDataHorarioProps {
+  data:             Date | undefined;
+  horario:          string | null;
+  onDataChange:     (data: Date | undefined) => void;
+  onHorarioChange:  (horario: string) => void;
+  onAvancar:        () => void;
 }
 
 export function EtapaDataHorario({
@@ -30,8 +25,28 @@ export function EtapaDataHorario({
   onHorarioChange,
   onAvancar,
 }: EtapaDataHorarioProps) {
-  const horarios = data ? getHorariosDisponiveis(data) : [];
+  /* ── Gera os próximos 28 dias úteis da barbearia ─────────────── */
+  const diasUteis = useMemo(() => {
+    const result: Date[] = [];
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 35; i++) {
+      const d = new Date(hoje);
+      d.setDate(hoje.getDate() + i);
+      if (BARBEARIA.diasFuncionamento.includes(d.getDay())) result.push(d);
+      if (result.length >= 28) break;
+    }
+    return result;
+  }, []);
+
+  const horarios    = data ? getHorariosDisponiveis(data) : [];
   const podeAvancar = !!data && !!horario;
+
+  /* Quando o usuário muda o dia, o pai já limpa o horário em selecionarData */
+  const handleSelecionarDia = (dia: Date) => {
+    onDataChange(dia);
+  };
 
   return (
     <div className="pt-2 pb-10">
@@ -45,40 +60,38 @@ export function EtapaDataHorario({
         </p>
       </div>
 
-      {/* ── Calendário ─────────────────────────────────────────── */}
-      {/* p-2 mobile para dar mais espaço ao calendário; p-4 desktop */}
-      <div className="bg-[#111111] border border-[#1E1E1E] p-2 sm:p-4 mb-4">
-        <Calendar
-          mode="single"
-          selected={data}
-          onSelect={onDataChange}
-          locale={ptBR}
-          disabled={isDiaDesabilitado}
-          fromDate={new Date()}
-          className="w-full"
-        />
-
-        {/* Legenda */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#1A1A1A]">
-          <LegendaItem cor="bg-[#C9A84C]" label="Selecionado" />
-          <LegendaItem cor="border border-[#C9A84C40]" label="Hoje" />
-          <LegendaItem cor="bg-[#1A1A1A] opacity-30" label="Indisponível" />
+      {/* ── Carrossel de dias ─────────────────────────────────────── */}
+      <div className="mb-6">
+        <p className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#3A3A3A] mb-3 px-1">
+          Dias disponíveis
+        </p>
+        <div className="overflow-x-auto scrollbar-none -mx-5 px-5">
+          <div className="flex gap-2 pb-2 min-w-max">
+            {diasUteis.map((dia) => (
+              <DiaBtn
+                key={dia.toISOString()}
+                dia={dia}
+                selecionado={data?.toDateString() === dia.toDateString()}
+                onSelecionar={handleSelecionarDia}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Grade de horários ───────────────────────────────────── */}
+      {/* ── Grade de horários ─────────────────────────────────────── */}
       <div
         className={cn(
-          "bg-[#111111] border border-[#1E1E1E] p-4",
+          "bg-[#0F0F0F]/80 backdrop-blur-sm rounded-xl border border-[#1E1E1E] p-4",
           "transition-opacity duration-300",
           !data && "opacity-40 pointer-events-none"
         )}
       >
-        <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[#6B6760] mb-4 flex items-center gap-2">
-          <Clock className="w-3 h-3 text-[#C9A84C]" />
+        <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#3A3A3A] mb-4 flex items-center gap-2">
+          <Clock className="w-3 h-3 text-[#C9A84C]" strokeWidth={1.5} />
           {data
-            ? `Horários — ${data.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}`
-            : "Selecione uma data"}
+            ? data.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })
+            : "Selecione uma data acima"}
         </p>
 
         {data && (
@@ -87,7 +100,6 @@ export function EtapaDataHorario({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.25 }}
-            /* 3 colunas mobile (botões mais largos), 6 colunas desktop */
             className="grid grid-cols-3 sm:grid-cols-6 gap-2"
           >
             {horarios.map(({ slot, disponivel }) => (
@@ -103,15 +115,15 @@ export function EtapaDataHorario({
         )}
       </div>
 
-      {/* CTA */}
+      {/* CTA h-14 */}
       <button
         onClick={onAvancar}
         disabled={!podeAvancar}
         className={cn(
-          "w-full mt-5 py-4 text-sm font-semibold tracking-[0.15em] uppercase",
+          "h-14 w-full mt-5 font-mono text-sm font-bold tracking-[0.2em] uppercase",
           "transition-all duration-300",
           podeAvancar
-            ? "text-[#0B0B0B] bg-[#C9A84C] hover:bg-[#E6C97A] hover:shadow-[0_0_32px_0_#C9A84C40] active:scale-[0.98]"
+            ? "text-[#0B0B0B] bg-amber-500 hover:bg-amber-400 hover:shadow-[0_0_32px_0_#C9A84C50] active:scale-[0.98]"
             : "text-[#6B6760] bg-[#1A1A1A] cursor-not-allowed"
         )}
       >
@@ -123,42 +135,100 @@ export function EtapaDataHorario({
   );
 }
 
-/* ─── Botão de horário ────────────────────────────────────────── */
+/* ─── Botão de dia no carrossel ──────────────────────────────────── */
+function DiaBtn({
+  dia,
+  selecionado,
+  onSelecionar,
+}: {
+  dia:          Date;
+  selecionado:  boolean;
+  onSelecionar: (d: Date) => void;
+}) {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const isHoje = dia.toDateString() === hoje.toDateString();
+
+  return (
+    <motion.button
+      whileTap={{ scale: 0.93 }}
+      onClick={() => onSelecionar(dia)}
+      className={cn(
+        "flex-none flex flex-col items-center gap-1 w-[52px] py-3 rounded-xl border",
+        "transition-all duration-200",
+        selecionado
+          ? "bg-amber-500 border-amber-500 text-[#0B0B0B] shadow-[0_0_16px_#C9A84C40]"
+          : [
+              "bg-[#0F0F0F]/80 border-[#1E1E1E] hover:border-[#C9A84C40]",
+              isHoje ? "text-[#C9A84C]" : "text-[#6B6760] hover:text-[#A8A49E]",
+            ]
+      )}
+    >
+      {/* Dia da semana */}
+      <span className={cn(
+        "font-mono text-[8px] tracking-[0.15em] uppercase",
+        selecionado ? "text-[#0B0B0B]" : "text-[#3A3A3A]"
+      )}>
+        {DIA_CURTO[dia.getDay()]}
+      </span>
+
+      {/* Número do dia */}
+      <span className="font-display text-xl font-semibold leading-none">
+        {dia.getDate()}
+      </span>
+
+      {/* Mês */}
+      <span className={cn(
+        "font-mono text-[8px] tracking-wider",
+        selecionado ? "text-[#0B0B0B80]" : "text-[#3A3A3A]"
+      )}>
+        {MES_CURTO[dia.getMonth()]}
+      </span>
+
+      {/* Ponto indicador de hoje */}
+      {isHoje && !selecionado && (
+        <span className="w-1 h-1 rounded-full bg-[#C9A84C]" />
+      )}
+    </motion.button>
+  );
+}
+
+/* ─── Botão de horário — com linha diagonal se indisponível ─────── */
 function HorarioBtn({
   slot,
   disponivel,
   selecionado,
   onSelecionar,
 }: {
-  slot: string;
-  disponivel: boolean;
-  selecionado: boolean;
+  slot:         string;
+  disponivel:   boolean;
+  selecionado:  boolean;
   onSelecionar: (s: string) => void;
 }) {
   return (
     <button
       onClick={() => disponivel && onSelecionar(slot)}
       disabled={!disponivel}
-      /* min-h-[48px] garante alvo de toque mínimo (padrão Apple/Google) */
       className={cn(
-        "min-h-[48px] px-1 text-xs font-semibold tracking-wide",
-        "border transition-all duration-200",
-        selecionado && "bg-[#C9A84C] border-[#C9A84C] text-[#0B0B0B] shadow-[0_0_12px_0_#C9A84C30]",
-        !selecionado && disponivel && "border-[#2A2A2A] text-[#A8A49E] hover:border-[#C9A84C50] hover:text-[#F0EDE8] hover:bg-[#C9A84C08]",
-        !disponivel && "border-[#1A1A1A] text-[#3A3A3A] cursor-not-allowed line-through"
+        "relative h-12 text-xs font-mono tracking-wide rounded-lg border overflow-hidden",
+        "transition-all duration-200",
+        selecionado  && "bg-amber-500 border-amber-500 text-[#0B0B0B] shadow-[0_0_12px_#C9A84C30]",
+        !selecionado && disponivel  && "border-[#2A2A2A] text-[#A8A49E] hover:border-[#C9A84C50] hover:text-[#F0EDE8] hover:bg-[#C9A84C08]",
+        !disponivel  && "border-[#141414] text-[#2A2A2A] cursor-not-allowed"
       )}
     >
-      {slot}
+      {/* Linha diagonal para slots ocupados */}
+      {!disponivel && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 opacity-50"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, transparent, transparent 4px, #1E1E1E 4px, #1E1E1E 5px)",
+          }}
+        />
+      )}
+      <span className="relative z-10">{slot}</span>
     </button>
-  );
-}
-
-/* ─── Item de legenda ─────────────────────────────────────────── */
-function LegendaItem({ cor, label }: { cor: string; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={cn("w-3 h-3 shrink-0", cor)} />
-      <span className="text-[10px] text-[#6B6760]">{label}</span>
-    </div>
   );
 }

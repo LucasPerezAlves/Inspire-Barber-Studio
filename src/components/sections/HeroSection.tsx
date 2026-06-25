@@ -1,157 +1,179 @@
+"use client";
+
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, CalendarDays, Scissors } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/* Foto do barbeiro como imagem cinematográfica de fundo — Firebase */
+const HERO_PHOTO =
+  "https://firebasestorage.googleapis.com/v0/b/marcaai-a6efb.appspot.com/o/profileBarber%2FgJImKl5pipbmAT8l7eF0RRAB1Ic2.jpeg?alt=media&token=501a651f-9fa4-4795-9f98-8a972bb4a32e";
+
+const stagger = {
+  show: { transition: { staggerChildren: 0.11, delayChildren: 0.15 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } },
+};
+
 export function HeroSection() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  /* Parallax suave — imagem sobe mais devagar que o scroll */
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const bgY   = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
+  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "7%"]);
+
   return (
     <section
+      ref={sectionRef}
       id="inicio"
-      className="relative min-h-screen flex flex-col overflow-hidden"
+      className="relative min-h-screen overflow-hidden bg-[#0B0B0B]"
     >
-      {/* ── Backgrounds ──────────────────────────────────────────── */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0B0B0B] via-[#0F0F0F] to-[#151510]" />
+      {/* ── Imagem de fundo com parallax ─────────────────────────── */}
+      <motion.div style={{ y: bgY }} className="absolute inset-0 scale-[1.18] origin-top">
+        <Image
+          src={HERO_PHOTO}
+          alt="Inspire Barber Studio"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[60%_15%]"
+        />
+        {/* Overlays cinematográficos: escurece laterais e base */}
+        <div className="absolute inset-0 bg-[#0B0B0B]/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0B0B0B]/96 via-[#0B0B0B]/55 to-[#0B0B0B]/15" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-transparent to-[#0B0B0B]/35" />
+      </motion.div>
 
+      {/* ── Grain cinematográfico ─────────────────────────────────── */}
       <div
-        className="absolute inset-0 opacity-[0.025]"
+        className="absolute inset-0 opacity-[0.038] pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
       />
 
-      <div
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(201,168,76,1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(201,168,76,1) 1px, transparent 1px)
-          `,
-          backgroundSize: "80px 80px",
-        }}
-      />
-
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,transparent_20%,#0B0B0B_100%)]" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[#C9A84C] opacity-[0.055] blur-[160px] pointer-events-none" />
-
-      {/* ── Zona 1: conteúdo principal — ocupa o espaço disponível ── */}
-      <div className="relative z-10 flex-1 flex items-center justify-center px-6 pt-28 pb-8">
-        <div className="text-center max-w-5xl mx-auto w-full">
-
-          {/* Badge */}
-          <div className="flex items-center justify-center mb-8">
-            <span
-              className={cn(
-                "inline-flex items-center gap-2.5",
-                "text-[10px] sm:text-xs font-semibold tracking-[0.35em] uppercase",
-                "text-[#C9A84C] border border-[#C9A84C28] bg-[#C9A84C08]",
-                "px-5 py-2.5"
-              )}
-            >
-              <Scissors className="w-3 h-3" strokeWidth={1.5} />
-              Barbearia Premium — Blumenau, SC
+      {/* ── Conteúdo — desalinhado à esquerda (assimétrico) ─────── */}
+      <motion.div
+        style={{ y: textY }}
+        className="relative z-10 min-h-screen flex flex-col justify-center px-6 sm:px-10 lg:px-[8vw] pt-28 pb-24"
+      >
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="max-w-[600px] lg:max-w-[680px]"
+        >
+          {/* Overline mono */}
+          <motion.div variants={fadeUp} className="flex items-center gap-3 mb-10">
+            <div className="w-6 h-px bg-[#C9A84C]" />
+            <span className="font-mono text-[10px] tracking-[0.42em] uppercase text-[#C9A84C]">
+              Barbearia Premium · Blumenau, SC
             </span>
-          </div>
+          </motion.div>
 
-          {/* Headline */}
-          <h1 className="font-display font-light leading-[1.05] mb-6">
-            <span className="block text-[#F0EDE8] text-5xl sm:text-7xl lg:text-8xl xl:text-9xl">
+          {/* Índice da seção */}
+          <motion.span
+            variants={fadeUp}
+            className="block font-mono text-[11px] tracking-[0.28em] text-[#C9A84C25] mb-5 select-none"
+          >
+            01 — INÍCIO
+          </motion.span>
+
+          {/* Headline — tipografia híbrida Serif + peso variável */}
+          <motion.h1 variants={fadeUp} className="leading-[0.9] mb-9">
+            <span className="block font-display text-[clamp(3.6rem,10vw,8rem)] font-light text-[#F0EDE8] tracking-tight">
               Arte.
             </span>
-            <span className="block text-gradient-gold text-5xl sm:text-7xl lg:text-8xl xl:text-9xl font-semibold italic">
+            <span className="block font-display text-[clamp(3.6rem,10vw,8rem)] font-semibold italic text-gradient-gold tracking-tight">
               Precisão.
             </span>
-            <span className="block text-[#F0EDE8] text-5xl sm:text-7xl lg:text-8xl xl:text-9xl">
+            <span className="block font-display text-[clamp(3.6rem,10vw,8rem)] font-light text-[#F0EDE8] tracking-tight">
               Estilo.
             </span>
-          </h1>
+          </motion.h1>
 
-          {/* Ornamento */}
-          <div className="flex items-center justify-center gap-4 my-8">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-[#C9A84C60]" />
-            <Scissors className="w-4 h-4 text-[#C9A84C] rotate-[-45deg]" strokeWidth={1} />
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-[#C9A84C60]" />
-          </div>
+          {/* Descrição — voz Mono espaçada */}
+          <motion.p
+            variants={fadeUp}
+            className="font-mono text-[11px] sm:text-xs text-[#A8A49E] leading-[2] tracking-wide max-w-[300px] mb-11"
+          >
+            Cada detalhe é pensado para você.
+            <br />
+            Do corte à barba, do produto ao ambiente —<br />
+            uma experiência que vai além do óbvio.
+          </motion.p>
 
-          {/* Subtítulo */}
-          <p className="text-[#A8A49E] text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-10">
-            Cada detalhe é pensado para você. Do corte à barba, do produto
-            ao ambiente — uma experiência que vai além do óbvio.
-          </p>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {/* CTA — botão com preenchimento fluido (bottom-up fill) */}
+          <motion.div variants={fadeUp}>
             <Link
               href="/agendar"
               className={cn(
-                "inline-flex items-center gap-3",
-                "px-8 py-4 text-sm font-semibold tracking-[0.2em] uppercase",
-                "text-[#0B0B0B] bg-[#C9A84C]",
-                "hover:bg-[#E6C97A] hover:shadow-[0_0_40px_0_#C9A84C45]",
-                "transition-all duration-300 active:scale-[0.97]"
+                "group relative inline-flex items-center gap-3 overflow-hidden",
+                "px-9 py-[1.05rem] text-sm font-semibold tracking-[0.2em] uppercase",
+                "border border-[#C9A84C]"
               )}
             >
-              <CalendarDays className="w-4 h-4" strokeWidth={2} />
-              Agendar Horário
+              {/* Fill surge de baixo para cima */}
+              <span
+                className={cn(
+                  "absolute inset-0 bg-[#C9A84C]",
+                  "translate-y-full group-hover:translate-y-0",
+                  "transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                )}
+              />
+              <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300 delay-[0ms] group-hover:delay-[50ms]">
+                Agendar Horário
+              </span>
+              <ArrowRight
+                className="relative z-10 w-4 h-4 text-[#C9A84C] group-hover:text-[#0B0B0B] group-hover:translate-x-1 transition-all duration-300"
+                strokeWidth={2}
+              />
             </Link>
+          </motion.div>
+        </motion.div>
 
-            <Link
-              href="#servicos"
-              className={cn(
-                "inline-flex items-center",
-                "px-8 py-4 text-sm font-semibold tracking-[0.2em] uppercase",
-                "text-[#A8A49E] border border-[#2A2A2A]",
-                "hover:border-[#C9A84C40] hover:text-[#F0EDE8] hover:bg-[#C9A84C06]",
-                "transition-all duration-300"
-              )}
-            >
-              Ver Serviços
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Zona 2: stats strip — ancorada ao fundo do flex ──────── */}
-      <div className="relative z-10 pb-16 pt-4 px-6">
-        <div className="divider-gold max-w-sm mx-auto mb-8 opacity-40" />
-        <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-lg mx-auto">
+        {/* Stats — canto inferior direito, assimétrico */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0, duration: 0.8 }}
+          className="absolute bottom-16 right-6 sm:right-10 lg:right-[8vw] flex items-end gap-7 sm:gap-10"
+        >
           {[
-            { value: "5.0 ★", label: "Avaliação Google" },
+            { value: "5.0 ★", label: "Google" },
             { value: "65+",   label: "Avaliações" },
             { value: "100%",  label: "Satisfação" },
           ].map(({ value, label }) => (
-            <div key={label} className="text-center">
+            <div key={label} className="text-right">
               <span className="block font-display text-2xl sm:text-3xl text-[#C9A84C] font-semibold">
                 {value}
               </span>
-              <span className="block text-[10px] sm:text-xs text-[#6B6760] tracking-wider uppercase mt-1">
+              <span className="block font-mono text-[9px] tracking-[0.3em] uppercase text-[#6B6760] mt-0.5">
                 {label}
               </span>
             </div>
           ))}
-        </div>
-      </div>
+        </motion.div>
 
-      {/* ── Scroll indicator ─────────────────────────────────────── */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1.5 text-[#6B6760]">
-        <Link
-          href="#servicos"
-          aria-label="Ir para serviços"
-          className="flex flex-col items-center gap-1.5 group"
-        >
-          <div className="relative w-px h-8 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-[#C9A84C80] to-transparent animate-[slideDown_1.8s_ease-in-out_infinite]" />
+        {/* Linha de scroll */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+          <div className="relative w-px h-10 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-[#C9A84C90] to-transparent animate-[slideDown_2s_ease-in-out_infinite]" />
           </div>
-          <ArrowDown
-            className="w-3 h-3 group-hover:text-[#C9A84C] transition-colors animate-bounce"
-            strokeWidth={1.5}
-          />
-        </Link>
-      </div>
+        </div>
+      </motion.div>
 
-      {/* Corner decorations */}
-      <div className="absolute top-8 left-8 w-8 h-8 border-t border-l border-[#C9A84C20]" />
-      <div className="absolute top-8 right-8 w-8 h-8 border-t border-r border-[#C9A84C20]" />
-      <div className="absolute bottom-8 left-8 w-8 h-8 border-b border-l border-[#C9A84C20]" />
-      <div className="absolute bottom-8 right-8 w-8 h-8 border-b border-r border-[#C9A84C20]" />
+      {/* Marcas de canto editoriais */}
+      <div className="absolute top-7 left-7 w-9 h-9 border-t border-l border-[#C9A84C18] z-20 pointer-events-none" />
+      <div className="absolute top-7 right-7 w-9 h-9 border-t border-r border-[#C9A84C18] z-20 pointer-events-none" />
     </section>
   );
 }

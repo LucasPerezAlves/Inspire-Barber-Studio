@@ -37,7 +37,6 @@ interface BarbeiroData {
   agendamentos: Agendamento[];
 }
 
-/* ── Gerenciamento de equipe ─────────────────────────────────────── */
 interface ProfDB {
   id: string;
   nome: string;
@@ -50,11 +49,12 @@ interface ProfDB {
 }
 type ViewEquipe = "lista" | "cadastro" | "edicao";
 interface FormEquipe {
-  nome: string; especialidade: string; slug: string; whatsapp: string; email: string; senha: string;
+  nome: string; especialidade: string; slug: string;
+  whatsapp: string; email: string; senha: string;
 }
 
-/* ── Slugs válidos ───────────────────────────────────────────────── */
-const TODOS_SLUGS = ["pablo", "altamiro"] as const;
+/* ── Slugs e nomes ───────────────────────────────────────────────── */
+const TODOS_SLUGS    = ["pablo", "altamiro"] as const;
 const PRIMEIRO_NOME: Record<string, string> = { pablo: "Pablo", altamiro: "Altamiro" };
 
 /* ── Helpers ────────────────────────────────────────────────────── */
@@ -63,15 +63,13 @@ function formatarPreco(v: number) {
 }
 
 function todayLabel() {
-  return new Date().toLocaleDateString("pt-BR", {
-    weekday: "long", day: "2-digit", month: "long",
-  });
+  return new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; cls: string }> = {
-  confirmado: { label: "Confirmado", cls: "text-[#C9A84C] border-[#C9A84C40] bg-[#C9A84C08]" },
-  concluido:  { label: "Concluído",  cls: "text-[#4ADE80] border-[#4ADE8030] bg-[#4ADE8008]" },
-  bloqueado:  { label: "Bloqueado",  cls: "text-[#6B6760] border-[#2A2A2A] bg-[#1A1A1A]"    },
+  confirmado: { label: "Confirmado", cls: "text-[#C9A84C] border-[#C9A84C30] bg-[#C9A84C08]"            },
+  concluido:  { label: "Concluído",  cls: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"      },
+  bloqueado:  { label: "Bloqueado",  cls: "text-[#4A4A4A] border-[#1A1A1A] bg-[#141414]"                },
 };
 
 function isoToHorario(iso: string): string {
@@ -96,8 +94,20 @@ function mapAgendamento(a: AgendamentoDB): Agendamento {
   };
 }
 
+/* ── Shared styles ──────────────────────────────────────────────── */
+const FORM_VAZIO: FormEquipe = {
+  nome: "", especialidade: "", slug: "", whatsapp: "", email: "", senha: "",
+};
+const INPUT_CLS = cn(
+  "w-full bg-[#0A0A0A] px-4 h-12 sm:h-14 text-base text-[#F0EDE8] rounded-lg",
+  "placeholder:text-[#1E1E1E] border border-[#1E1E1E]",
+  "focus:border-[#C9A84C] focus:outline-none focus:shadow-[0_0_0_1px_#C9A84C12] transition-all duration-200"
+);
+const LABEL_CLS = "block font-mono text-[9px] font-semibold tracking-[0.28em] uppercase text-[#4A4A4A] mb-2";
+
 /* ══════════════════════════════════════════════════════════════════
-   Componente principal exportado
+   AdminPanel — entry point
+   Slug vem da URL mas a API ignora para BARBERs (usa JWT)
 ══════════════════════════════════════════════════════════════════ */
 export function AdminPanel({ slug, role }: { slug: string; role: "OWNER" | "BARBER" }) {
   const key = slug.toLowerCase();
@@ -105,9 +115,8 @@ export function AdminPanel({ slug, role }: { slug: string; role: "OWNER" | "BARB
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    /* IDOR FIX: dados buscados pelo servidor com slug do JWT.
-       BARBERs sempre recebem seus próprios dados, mesmo que o param
-       da URL seja adulterado. OWNERs podem ver qualquer painel. */
+    /* IDOR FIX: o servidor lê o slug do JWT para BARBERs,
+       ignorando o parâmetro de URL mesmo que seja adulterado. */
     async function fetchPanel() {
       try {
         const res  = await fetch(`/api/admin/painel?slug=${encodeURIComponent(key)}`);
@@ -123,10 +132,10 @@ export function AdminPanel({ slug, role }: { slug: string; role: "OWNER" | "BARB
         }
 
         setDados({
-          slug:         json.profissional.slug,
-          nome:         json.profissional.nome,
+          slug:          json.profissional.slug,
+          nome:          json.profissional.nome,
           especialidade: json.profissional.especialidade,
-          agendamentos: (json.agendamentos ?? []).map(mapAgendamento),
+          agendamentos:  (json.agendamentos ?? []).map(mapAgendamento),
         });
       } catch (err) {
         console.error("[AdminPanel] Erro de rede:", err);
@@ -148,15 +157,15 @@ function PainelSkeleton() {
   return (
     <div className="min-h-screen bg-[#0B0B0B] pt-20 flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-6 h-6 text-[#C9A84C] animate-spin" strokeWidth={1.5} />
-        <p className="text-[11px] text-[#6B6760] tracking-widest uppercase">Carregando painel…</p>
+        <Loader2 className="w-5 h-5 text-[#C9A84C] animate-spin" strokeWidth={1.5} />
+        <p className="font-mono text-[10px] text-[#3A3A3A] tracking-[0.3em] uppercase">Carregando painel…</p>
       </div>
     </div>
   );
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   Dashboard interativo
+   Dashboard principal
 ══════════════════════════════════════════════════════════════════ */
 function Dashboard({ dados, role }: { dados: BarbeiroData; role: "OWNER" | "BARBER" }) {
   const isOwner = role === "OWNER";
@@ -178,91 +187,97 @@ function Dashboard({ dados, role }: { dados: BarbeiroData; role: "OWNER" | "BARB
   const adicionarBloqueio = (horario: string, descricao: string) => {
     const novo: Agendamento = {
       id: `bl-${Date.now()}`, horario, cliente: "—", whatsapp: "",
-      servico: `Bloqueado • ${descricao}`, duracao: 60, preco: 0, status: "bloqueado", tags: [],
+      servico: `Bloqueado · ${descricao}`, duracao: 60, preco: 0,
+      status: "bloqueado", tags: [],
     };
-    setAgendamentos((prev) => [...prev, novo].sort((a, b) => a.horario.localeCompare(b.horario)));
+    setAgendamentos((prev) =>
+      [...prev, novo].sort((a, b) => a.horario.localeCompare(b.horario))
+    );
     setModalBloqueio(false);
   };
 
   return (
     <div className="min-h-screen bg-[#0B0B0B] pt-20">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_60%_30%_at_50%_0%,#C9A84C05_0%,transparent_65%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_55%_25%_at_50%_0%,#C9A84C04_0%,transparent_60%)] pointer-events-none" />
 
       <TeamSwitcher atual={dados.slug} isOwner={isOwner} />
 
       <div className="relative max-w-2xl mx-auto px-4 pt-6 pb-28 z-10">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <div className="mb-6 mt-4">
-          <p className="text-[9px] tracking-[0.4em] uppercase text-[#6B6760] mb-1">
+        <div className="mb-7 mt-2">
+          <p className="font-mono text-[9px] tracking-[0.4em] uppercase text-[#3A3A3A] mb-2">
             Painel Administrativo
           </p>
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="font-display text-xl font-semibold text-[#F0EDE8] leading-tight">
+              <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[#F0EDE8] leading-tight">
                 Cadeira de{" "}
                 <span className="text-gradient-gold">{dados.nome.split(" ")[0]}</span>
               </h1>
-              <p className="text-[11px] text-[#6B6760] mt-0.5">{dados.especialidade}</p>
+              <p className="font-mono text-[10px] text-[#4A4A4A] mt-1 tracking-wide">
+                {dados.especialidade}
+              </p>
             </div>
-            <p className="text-[11px] text-[#6B6760] text-right capitalize shrink-0 leading-tight">
+            <p className="font-mono text-[10px] text-[#3A3A3A] text-right capitalize shrink-0 leading-tight">
               {todayLabel()}
             </p>
           </div>
 
-          {/* Botão exclusivo do dono */}
           {isOwner && (
             <div className="mt-4">
               <motion.button
                 onClick={() => setModalEquipe(true)}
                 whileTap={{ scale: 0.97 }}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2",
-                  "border border-[#C9A84C40] text-[#C9A84C]",
-                  "text-[11px] font-semibold tracking-[0.15em] uppercase",
-                  "hover:bg-[#C9A84C10] hover:border-[#C9A84C80]",
+                  "flex items-center gap-2 px-3.5 py-2 rounded-lg",
+                  "border border-[#C9A84C25] text-[#C9A84C]",
+                  "font-mono text-[10px] font-semibold tracking-[0.15em] uppercase",
+                  "hover:bg-[#C9A84C08] hover:border-[#C9A84C50]",
                   "transition-all duration-200"
                 )}
               >
                 <Users className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Gerenciar Equipe 👥
+                Gerenciar Equipe
               </motion.button>
             </div>
           )}
         </div>
 
         {/* ── Métricas ────────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-2 mb-6">
+        <div className="grid grid-cols-3 gap-2 mb-7">
           <MetricCard
             icon={<CalendarDays className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={1.5} />}
-            label="Hoje" value={String(ativos.length)} sub="horários"
+            label="Hoje" value={String(ativos.length)} sub="atendimentos"
           />
           <MetricCard
             icon={<TrendingUp className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={1.5} />}
-            label="Estimado" value={formatarPreco(faturamento)} sub="faturamento" dourado
+            label="Faturamento" value={formatarPreco(faturamento)} sub="estimado" dourado
           />
           <MetricCard
             icon={<Clock className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={1.5} />}
-            label="Cadeira" value={`${hh}h${mm > 0 ? ` ${mm}m` : ""}`} sub="tempo total"
+            label="Cadeira" value={`${hh}h${mm > 0 ? `${mm}m` : ""}`} sub="tempo total"
           />
         </div>
 
         {/* ── Separador ───────────────────────────────────────── */}
-        <div className="flex items-center gap-3 mb-4">
-          <p className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#6B6760] shrink-0">
+        <div className="flex items-center gap-3 mb-5">
+          <p className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase text-[#3A3A3A] shrink-0">
             Agenda do Dia
           </p>
-          <div className="flex-1 h-px bg-[#1A1A1A]" />
-          <span className="text-[10px] text-[#3A3A3A] tabular-nums">
+          <div className="flex-1 h-px bg-[#141414]" />
+          <span className="font-mono text-[9px] text-[#2A2A2A] tabular-nums">
             {agendamentos.filter((a) => a.status === "confirmado").length} pendentes
           </span>
         </div>
 
         {/* ── Timeline ────────────────────────────────────────── */}
         {agendamentos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Scissors className="w-6 h-6 text-[#2A2A2A]" strokeWidth={1.5} />
-            <p className="text-[11px] text-[#3A3A3A] tracking-widest uppercase">
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
+            <div className="w-12 h-12 rounded-xl bg-[#0F0F0F] border border-[#1A1A1A] flex items-center justify-center">
+              <Scissors className="w-5 h-5 text-[#2A2A2A]" strokeWidth={1.5} />
+            </div>
+            <p className="font-mono text-[10px] text-[#2A2A2A] tracking-[0.3em] uppercase">
               Nenhum agendamento para hoje
             </p>
           </div>
@@ -271,22 +286,22 @@ function Dashboard({ dados, role }: { dados: BarbeiroData; role: "OWNER" | "BARB
         )}
       </div>
 
-      {/* ── FAB Bloquear ────────────────────────────────────────── */}
+      {/* ── FAB — Bloquear ──────────────────────────────────────── */}
       <motion.button
         onClick={() => setModalBloqueio(true)}
         whileTap={{ scale: 0.94 }}
         className={cn(
           "fixed bottom-6 right-4 z-40",
-          "flex items-center gap-2 px-4 py-3",
-          "bg-[#111111] border border-[#2A2A2A]",
-          "text-[11px] font-semibold tracking-wider uppercase text-[#6B6760]",
-          "shadow-[0_8px_32px_0_#000000A0]",
-          "hover:border-[#C9A84C40] hover:text-[#C9A84C]",
+          "flex items-center gap-2 px-4 py-3 rounded-xl",
+          "bg-[#0D0D0D] border border-[#1E1E1E]",
+          "font-mono text-[10px] font-semibold tracking-wider uppercase text-[#4A4A4A]",
+          "shadow-[0_8px_32px_0_#00000090]",
+          "hover:border-[#C9A84C30] hover:text-[#C9A84C]",
           "transition-all duration-200"
         )}
       >
-        <Lock className="w-3.5 h-3.5" strokeWidth={2} />
-        Bloquear Minha Agenda
+        <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
+        Bloquear Agenda
       </motion.button>
 
       <AnimatePresence>
@@ -307,18 +322,309 @@ function Dashboard({ dados, role }: { dados: BarbeiroData; role: "OWNER" | "BARB
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   ModalEquipe — gerenciamento centralizado (owner only)
+   TeamSwitcher — header de navegação
+   OWNER: vê e navega entre todos os slugs (abas fosca/âmbar)
+   BARBER: vê apenas o próprio nome
 ══════════════════════════════════════════════════════════════════ */
-const FORM_VAZIO: FormEquipe = {
-  nome: "", especialidade: "", slug: "", whatsapp: "", email: "", senha: "",
-};
-const INPUT_CLS = cn(
-  "w-full bg-[#0D0D0D] px-4 h-12 sm:h-14 text-base text-[#F0EDE8]",
-  "placeholder:text-[#2A2A2A] border border-[#2A2A2A]",
-  "focus:border-[#C9A84C] focus:outline-none transition-colors duration-200"
-);
-const LABEL_CLS = "block text-[9px] font-semibold tracking-[0.25em] uppercase text-[#6B6760] mb-2";
+function TeamSwitcher({ atual, isOwner }: { atual: string; isOwner: boolean }) {
+  const router = useRouter();
 
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin");
+  };
+
+  return (
+    <div className="flex items-center justify-between w-full h-16 px-5 sm:px-6 bg-black/80 backdrop-blur-md border-b border-neutral-900 relative z-10">
+
+      {/* Esquerda: logo + tabs */}
+      <div className="flex items-center gap-4">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#C9A84C0D] border border-[#C9A84C20]">
+            <Scissors className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={1.5} />
+          </div>
+          <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#1E1E1E] hidden sm:block select-none">
+            Inspire Barber
+          </span>
+        </div>
+
+        <div className="w-px h-4 bg-[#1A1A1A]" />
+
+        {/* OWNER: abas de troca de cadeira */}
+        {isOwner ? (
+          <div className="flex items-center gap-0.5 p-0.5 bg-[#0A0A0A] border border-[#141414] rounded-lg">
+            {TODOS_SLUGS.map((slug) => (
+              <Link
+                key={slug}
+                href={`/admin/${slug}`}
+                className={cn(
+                  "px-3 py-1.5 rounded-md font-mono text-[10px] tracking-[0.18em] uppercase transition-all duration-200",
+                  slug === atual
+                    ? "bg-[#C9A84C12] text-[#C9A84C] border border-[#C9A84C25]"
+                    : "text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#0F0F0F] border border-transparent"
+                )}
+              >
+                {PRIMEIRO_NOME[slug] ?? slug}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          /* BARBER: só o próprio nome */
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C9A84C]" />
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#C9A84C]">
+              {PRIMEIRO_NOME[atual] ?? atual}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Direita: botão sair com transição suave */}
+      <motion.button
+        onClick={handleLogout}
+        whileTap={{ scale: 0.97 }}
+        className="group flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent hover:border-[#1A1A1A] transition-all duration-200"
+      >
+        <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#2A2A2A] group-hover:text-[#6B6760] transition-colors duration-200">
+          Sair
+        </span>
+        <LogOut className="w-3.5 h-3.5 text-[#2A2A2A] group-hover:text-amber-400 transition-colors duration-300" strokeWidth={1.5} />
+      </motion.button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MetricCard — números grandes e expressivos
+══════════════════════════════════════════════════════════════════ */
+function MetricCard({
+  icon, label, value, sub, dourado = false,
+}: {
+  icon: React.ReactNode; label: string; value: string; sub: string; dourado?: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn(
+        "relative overflow-hidden bg-[#0D0D0D] border p-3 sm:p-4 flex flex-col gap-1.5",
+        dourado ? "border-[#C9A84C20]" : "border-[#141414]"
+      )}
+    >
+      {/* Fio dourado no topo para o card de faturamento */}
+      {dourado && (
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#C9A84C35] to-transparent" />
+      )}
+
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <span className="font-mono text-[8px] tracking-[0.3em] uppercase text-[#2A2A2A] truncate">
+          {label}
+        </span>
+      </div>
+
+      <p className={cn(
+        "font-display font-semibold leading-none tabular-nums break-all",
+        dourado
+          ? "text-[#C9A84C] text-lg sm:text-xl"
+          : "text-[#F0EDE8] text-2xl sm:text-3xl"
+      )}>
+        {value}
+      </p>
+
+      <p className="font-mono text-[9px] text-[#2A2A2A] tracking-wide">{sub}</p>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AgendaTimeline — linha do tempo vertical minimalista
+══════════════════════════════════════════════════════════════════ */
+function AgendaTimeline({
+  agendamentos, onMudarStatus,
+}: {
+  agendamentos: Agendamento[];
+  onMudarStatus: (id: string, s: Status) => void;
+}) {
+  return (
+    <div className="relative">
+      {/* Linha vertical */}
+      <div className="absolute left-[52px] top-6 bottom-6 w-px bg-gradient-to-b from-[#C9A84C20] via-[#1A1A1A] to-transparent pointer-events-none" />
+      <div className="space-y-3">
+        {agendamentos.map((ag, i) => (
+          <motion.div
+            key={ag.id}
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.28, ease: "easeOut" }}
+          >
+            <AgendamentoCard ag={ag} onMudarStatus={onMudarStatus} />
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Bloco de agendamento individual ────────────────────────────── */
+function AgendamentoCard({
+  ag, onMudarStatus,
+}: {
+  ag: Agendamento;
+  onMudarStatus: (id: string, s: Status) => void;
+}) {
+  const [expandido, setExpandido] = useState(false);
+  const { label, cls } = STATUS_CONFIG[ag.status];
+  const bloqueado = ag.status === "bloqueado";
+
+  const waUrl = ag.whatsapp
+    ? `https://wa.me/${ag.whatsapp}?text=${encodeURIComponent(
+        `Olá ${ag.cliente}! Passando para informar um aviso sobre seu agendamento das ${ag.horario} aqui na Inspire Barber Studio.`
+      )}`
+    : null;
+
+  return (
+    <div className="flex gap-3 items-start">
+      {/* Coluna de horário + ponto da timeline */}
+      <div className="w-[52px] shrink-0 flex flex-col items-center pt-3.5 gap-2">
+        <span className={cn(
+          "font-mono text-sm font-bold tabular-nums leading-none",
+          bloqueado ? "text-[#1E1E1E]" : "text-[#C9A84C]"
+        )}>
+          {ag.horario}
+        </span>
+        <div className={cn(
+          "w-2 h-2 rounded-full z-10",
+          ag.status === "concluido"  ? "bg-emerald-400"  :
+          ag.status === "confirmado" ? "bg-[#C9A84C]"    :
+                                       "bg-[#141414] border border-[#1E1E1E]"
+        )} />
+      </div>
+
+      {/* Card flutuante */}
+      <div className={cn(
+        "flex-1 rounded-xl border overflow-hidden",
+        bloqueado
+          ? "border-[#0F0F0F] bg-[#0A0A0A] opacity-30"
+          : cn(
+              "bg-[#0D0D0D] hover:border-[#1E1E1E] transition-colors duration-200",
+              ag.status === "concluido"
+                ? "border-emerald-900/20"
+                : "border-[#141414]"
+            )
+      )}>
+        <button
+          className="w-full text-left p-3.5"
+          onClick={() => !bloqueado && setExpandido((v) => !v)}
+          disabled={bloqueado}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              {/* Badge de status — arredondado */}
+              <span className={cn(
+                "inline-flex items-center px-2.5 py-0.5 mb-2",
+                "rounded-full text-[9px] font-semibold tracking-[0.15em] uppercase border",
+                cls
+              )}>
+                {label}
+              </span>
+
+              {/* Nome do cliente em fonte serifada */}
+              <p className={cn(
+                "font-display font-semibold leading-tight truncate",
+                bloqueado ? "text-[#1E1E1E] text-sm" : "text-[#F0EDE8] text-sm sm:text-base"
+              )}>
+                {bloqueado ? "Horário bloqueado" : ag.cliente}
+              </p>
+
+              {/* Serviço em mono */}
+              <p className="font-mono text-[10px] text-[#3A3A3A] mt-1 truncate tracking-wide">
+                {ag.servico}
+              </p>
+            </div>
+
+            {!bloqueado && (
+              <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                <span className="font-display text-sm font-semibold text-[#C9A84C] tabular-nums">
+                  {formatarPreco(ag.preco)}
+                </span>
+                <motion.div animate={{ rotate: expandido ? 90 : 0 }} transition={{ duration: 0.18 }}>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#2A2A2A]" strokeWidth={1.5} />
+                </motion.div>
+              </div>
+            )}
+          </div>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {expandido && !bloqueado && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="border-t border-[#0F0F0F] px-3.5 pt-3 pb-3.5 space-y-3">
+
+                {ag.tags.length > 0 && (
+                  <div>
+                    <p className="font-mono text-[8px] font-bold tracking-[0.3em] uppercase text-[#1E1E1E] mb-2">
+                      Preferências
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ag.tags.map((tag) => (
+                        <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-[10px] text-[#C9A84C60] border border-[#C9A84C15] bg-[#C9A84C06]">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {waUrl && (
+                    <a
+                      href={waUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold text-emerald-400 border border-emerald-500/20 bg-emerald-500/5 active:scale-95 transition-all duration-150"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" strokeWidth={2} />
+                      WhatsApp
+                    </a>
+                  )}
+                  {ag.status === "confirmado" && (
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => onMudarStatus(ag.id, "concluido")}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold text-[#C9A84C] border border-[#C9A84C25] bg-[#C9A84C06] hover:bg-[#C9A84C10] transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={2} />
+                      Concluir
+                    </motion.button>
+                  )}
+                  {ag.status === "concluido" && (
+                    <button
+                      onClick={() => onMudarStatus(ag.id, "confirmado")}
+                      className="text-[10px] text-[#2A2A2A] hover:text-[#6B6760] transition-colors px-2 py-1 rounded"
+                    >
+                      ↩ Reverter
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ModalEquipe — gerenciamento de equipe (owner only)
+══════════════════════════════════════════════════════════════════ */
 function ModalEquipe({ onClose }: { onClose: () => void }) {
   const [view,            setView]            = useState<ViewEquipe>("lista");
   const [profissionais,   setProfissionais]   = useState<ProfDB[]>([]);
@@ -343,7 +649,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
       const json = await res.json() as { profissionais?: ProfDB[]; error?: string };
       setProfissionais(json.profissionais ?? []);
     } catch {
-      /* lista fica vazia, o usuário pode tentar fechar e reabrir */
+      /* lista fica vazia — usuário pode fechar e reabrir */
     } finally {
       setLoadingLista(false);
     }
@@ -364,8 +670,6 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
         setProfissionais((prev) =>
           prev.map((p) => p.id === prof.id ? { ...p, role: json.role! } : p)
         );
-      } else {
-        console.error("[toggleRole]", json.error);
       }
     } catch (err) {
       console.error("[toggleRole] Erro de rede:", err);
@@ -507,7 +811,8 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
   };
 
   const setField = (key: keyof FormEquipe) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -517,23 +822,33 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 
   return (
     <>
+      {/* Overlay */}
       <motion.div
         key="overlay-equipe"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
       />
 
+      {/* Modal — rounded-2xl */}
       <motion.div
         key="modal-equipe"
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 12, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 380, damping: 28 }}
-        className="fixed inset-x-2 top-[3vh] bottom-[3vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-1/2 sm:-translate-y-1/2 sm:bottom-auto sm:w-full sm:max-w-2xl z-50 bg-[#121212] border border-[#1E1E1E] overflow-hidden flex flex-col"
+        className={cn(
+          "fixed inset-x-3 top-[3vh] bottom-[3vh] z-50",
+          "sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2",
+          "sm:top-1/2 sm:-translate-y-1/2 sm:bottom-auto",
+          "sm:w-full sm:max-w-2xl",
+          "bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden",
+          "flex flex-col shadow-[0_40px_80px_0_#00000090]"
+        )}
       >
-        <div className="h-[2px] bg-gradient-to-r from-transparent via-[#C9A84C] to-transparent" />
+        {/* Fio dourado */}
+        <div className="h-px bg-gradient-to-r from-transparent via-[#C9A84C40] to-transparent shrink-0" />
 
         <AnimatePresence mode="wait" initial={false}>
 
@@ -541,75 +856,81 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
           {view === "lista" && (
             <motion.div
               key="view-lista"
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
               className="flex flex-col flex-1 min-h-0"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-5 sm:px-8 pt-5 pb-5 border-b border-[#1A1A1A] shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center justify-center w-8 h-8 bg-[#C9A84C10] border border-[#C9A84C30]">
+              <div className="flex items-center justify-between px-5 sm:px-7 pt-5 pb-4 border-b border-[#0F0F0F] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 flex items-center justify-center rounded-xl bg-[#C9A84C0D] border border-[#C9A84C20]">
                     <Users className="w-3.5 h-3.5 text-[#C9A84C]" strokeWidth={1.5} />
                   </div>
                   <div>
                     <h2 className="font-display text-base font-semibold text-[#F0EDE8] leading-tight">
                       Gerenciamento da Equipe
                     </h2>
-                    <p className="text-[10px] text-[#6B6760] tracking-wider uppercase mt-0.5">
+                    <p className="font-mono text-[9px] text-[#3A3A3A] tracking-[0.25em] uppercase mt-0.5">
                       Inspire Barber Studio
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
+                <div className="flex items-center gap-1.5">
+                  <motion.button
                     onClick={abrirCadastro}
+                    whileTap={{ scale: 0.95 }}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2",
-                      "border border-[#C9A84C40] text-[#C9A84C]",
-                      "text-[10px] font-semibold tracking-[0.15em] uppercase",
-                      "hover:bg-[#C9A84C10] transition-all duration-200"
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg",
+                      "border border-[#C9A84C30] text-[#C9A84C]",
+                      "font-mono text-[9px] font-semibold tracking-[0.15em] uppercase",
+                      "hover:bg-[#C9A84C08] hover:border-[#C9A84C60]",
+                      "transition-all duration-200"
                     )}
                   >
-                    <UserPlus className="w-4 h-4" strokeWidth={2} />
+                    <UserPlus className="w-3.5 h-3.5" strokeWidth={2} />
                     Novo
-                  </button>
-                  <button onClick={onClose} className="p-2 text-[#6B6760] hover:text-[#F0EDE8] transition-colors ml-1">
-                    <X className="w-5 h-5" strokeWidth={1.5} />
-                  </button>
+                  </motion.button>
+                  <motion.button
+                    onClick={onClose}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
+                  </motion.button>
                 </div>
               </div>
 
-              {/* Lista */}
+              {/* Lista de profissionais */}
               <div className="overflow-y-auto flex-1 overscroll-contain">
                 {loadingLista ? (
-                  <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center justify-center py-14">
                     <Loader2 className="w-5 h-5 text-[#C9A84C] animate-spin" strokeWidth={1.5} />
                   </div>
                 ) : profissionais.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2">
-                    <Users className="w-5 h-5 text-[#2A2A2A]" strokeWidth={1.5} />
-                    <p className="text-[11px] text-[#3A3A3A] tracking-widest uppercase">
+                  <div className="flex flex-col items-center justify-center py-14 gap-2">
+                    <Users className="w-5 h-5 text-[#1E1E1E]" strokeWidth={1.5} />
+                    <p className="font-mono text-[10px] text-[#2A2A2A] tracking-[0.25em] uppercase">
                       Nenhum profissional cadastrado
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#1A1A1A]">
+                  <div className="divide-y divide-[#0F0F0F]">
                     {profissionais.map((prof) => (
                       <div key={prof.id}>
-                        <div className="flex items-center gap-4 px-5 sm:px-8 py-4">
-                          {/* Avatar */}
-                          <div className="w-11 h-11 shrink-0 overflow-hidden border border-[#2A2A2A] bg-[#1A1A1A] flex items-center justify-center">
+                        <div className="flex items-center gap-4 px-5 sm:px-7 py-4">
+                          {/* Avatar perfeitamente redondo */}
+                          <div className="w-11 h-11 shrink-0 overflow-hidden rounded-full border border-[#2A2A2A] bg-[#141414] flex items-center justify-center">
                             {prof.foto_url ? (
                               <Image
                                 src={prof.foto_url}
                                 alt={prof.nome}
                                 width={44} height={44}
-                                className="w-full h-full object-cover object-top"
+                                className="w-full h-full object-cover"
                               />
                             ) : (
-                              <span className="text-sm font-bold text-[#6B6760]">
+                              <span className="font-display text-sm font-semibold text-[#4A4A4A]">
                                 {prof.nome.charAt(0).toUpperCase()}
                               </span>
                             )}
@@ -617,52 +938,55 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-base font-semibold text-[#F0EDE8] truncate leading-tight">
+                            <p className="font-display text-base font-semibold text-[#F0EDE8] truncate leading-tight">
                               {prof.nome}
                             </p>
                             <span className={cn(
-                              "inline-block mt-1 px-2 py-0.5",
-                              "text-[10px] font-bold tracking-[0.18em] uppercase border",
+                              "inline-block mt-1 px-2.5 py-0.5 rounded-full",
+                              "font-mono text-[9px] font-bold tracking-[0.18em] uppercase border",
                               prof.role === "OWNER"
-                                ? "text-[#C9A84C] border-[#C9A84C40] bg-[#C9A84C08]"
-                                : "text-[#6B6760] border-[#2A2A2A]"
+                                ? "text-[#C9A84C] border-[#C9A84C30] bg-[#C9A84C08]"
+                                : "text-[#3A3A3A] border-[#1E1E1E]"
                             )}>
                               {prof.role === "OWNER" ? "Owner" : "Barber"}
                             </span>
                           </div>
 
                           {/* Ações */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => toggleRole(prof)}
                               disabled={toggleLoadId === prof.id}
                               title={prof.role === "OWNER" ? "Rebaixar para Barber" : "Promover a Owner"}
                               className={cn(
-                                "p-2.5 transition-colors duration-200",
+                                "w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200",
                                 prof.role === "OWNER"
-                                  ? "text-[#C9A84C] hover:text-[#E6C97A]"
-                                  : "text-[#3A3A3A] hover:text-[#C9A84C]"
+                                  ? "text-[#C9A84C] hover:bg-[#C9A84C10]"
+                                  : "text-[#2A2A2A] hover:text-[#C9A84C] hover:bg-[#0F0F0F]"
                               )}
                             >
                               {toggleLoadId === prof.id
-                                ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
-                                : <ShieldCheck className="w-5 h-5" strokeWidth={1.5} />
+                                ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} />
+                                : <ShieldCheck className="w-4 h-4" strokeWidth={1.5} />
                               }
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => abrirEdicao(prof)}
                               title="Editar"
-                              className="p-2.5 text-[#3A3A3A] hover:text-[#F0EDE8] transition-colors duration-200"
+                              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-[#F0EDE8] hover:bg-[#0F0F0F] transition-all duration-200"
                             >
-                              <Pencil className="w-5 h-5" strokeWidth={1.5} />
-                            </button>
-                            <button
+                              <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
                               onClick={() => setDeletandoId(deletandoId === prof.id ? null : prof.id)}
                               title="Excluir"
-                              className="p-2.5 text-[#3A3A3A] hover:text-red-500 transition-colors duration-200"
+                              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-red-500 hover:bg-red-950/20 transition-all duration-200"
                             >
-                              <Trash2 className="w-5 h-5" strokeWidth={1.5} />
-                            </button>
+                              <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                            </motion.button>
                           </div>
                         </div>
 
@@ -676,32 +1000,33 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                               transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                               className="overflow-hidden"
                             >
-                              <div className="mx-5 sm:mx-8 mb-3 p-4 border border-red-900/40 bg-red-950/20">
+                              <div className="mx-5 sm:mx-7 mb-3 p-4 rounded-xl border border-red-900/30 bg-red-950/10">
                                 <p className="text-sm text-[#F0EDE8] mb-3 leading-relaxed">
                                   Tem certeza que deseja remover{" "}
                                   <span className="text-[#C9A84C] font-semibold">{prof.nome}</span>{" "}
                                   da equipe? Esta ação não pode ser desfeita.
                                 </p>
                                 <div className="flex gap-2">
-                                  <button
+                                  <motion.button
+                                    whileTap={{ scale: 0.97 }}
                                     onClick={confirmarExclusao}
                                     disabled={deletandoLoad}
                                     className={cn(
-                                      "flex items-center gap-2 px-4 py-2.5",
-                                      "text-[11px] font-semibold tracking-[0.1em] uppercase",
+                                      "flex items-center gap-2 px-4 py-2.5 rounded-lg",
+                                      "font-mono text-[10px] font-semibold tracking-[0.1em] uppercase",
                                       "bg-red-700 text-white hover:bg-red-600 transition-colors",
                                       deletandoLoad && "opacity-60 cursor-not-allowed"
                                     )}
                                   >
                                     {deletandoLoad
-                                      ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-                                      : <Trash2 className="w-4 h-4" strokeWidth={2} />
+                                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} />
+                                      : <Trash2  className="w-3.5 h-3.5" strokeWidth={2} />
                                     }
                                     Remover
-                                  </button>
+                                  </motion.button>
                                   <button
                                     onClick={() => setDeletandoId(null)}
-                                    className="px-4 py-2.5 text-[11px] font-semibold tracking-[0.1em] uppercase text-[#6B6760] hover:text-[#A8A49E] transition-colors"
+                                    className="px-4 py-2.5 rounded-lg font-mono text-[10px] font-semibold tracking-[0.1em] uppercase text-[#4A4A4A] hover:text-[#A8A49E] transition-colors"
                                   >
                                     Cancelar
                                   </button>
@@ -717,8 +1042,8 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Rodapé */}
-              <div className="px-5 sm:px-8 py-4 border-t border-[#1A1A1A] shrink-0">
-                <p className="text-[10px] text-[#2E2E2E] text-center tracking-wide">
+              <div className="px-5 sm:px-7 py-3.5 border-t border-[#0F0F0F] shrink-0">
+                <p className="font-mono text-[9px] text-[#2A2A2A] text-center tracking-wider">
                   {profissionais.length} profissional{profissionais.length !== 1 ? "is" : ""} · Inspire Barber Studio
                 </p>
               </div>
@@ -729,57 +1054,62 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
           {(view === "cadastro" || view === "edicao") && (
             <motion.div
               key="view-form"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
               className="flex flex-col flex-1 min-h-0"
             >
-              {/* Header do form */}
-              <div className="flex items-center justify-between px-5 sm:px-8 pt-5 pb-5 border-b border-[#1A1A1A] shrink-0">
+              {/* Header do formulário */}
+              <div className="flex items-center justify-between px-5 sm:px-7 pt-5 pb-4 border-b border-[#0F0F0F] shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <button
+                  <motion.button
                     onClick={voltarLista}
-                    className="w-10 h-10 flex items-center justify-center text-[#6B6760] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-200"
+                    whileTap={{ scale: 0.9 }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4A4A4A] hover:text-[#F0EDE8] hover:bg-[#141414] transition-all duration-200"
                   >
-                    <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
-                  </button>
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  </motion.button>
                   <div>
                     <h2 className="font-display text-base font-semibold text-[#F0EDE8] leading-tight">
                       {view === "cadastro" ? "Novo Profissional" : "Editar Profissional"}
                     </h2>
-                    <p className="text-[10px] text-[#6B6760] tracking-wider uppercase mt-0.5">
+                    <p className="font-mono text-[9px] text-[#3A3A3A] tracking-[0.25em] uppercase mt-0.5">
                       {view === "edicao" && profSelecionado ? profSelecionado.nome : "Inspire Barber · Equipe"}
                     </p>
                   </div>
                 </div>
-                <button onClick={onClose} className="p-2 text-[#6B6760] hover:text-[#F0EDE8] transition-colors">
-                  <X className="w-5 h-5" strokeWidth={1.5} />
-                </button>
+                <motion.button
+                  onClick={onClose}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.5} />
+                </motion.button>
               </div>
 
-              {/* Corpo do form */}
-              <div className="overflow-y-auto flex-1 overscroll-contain px-5 sm:px-8 py-5 space-y-5">
+              {/* Corpo do formulário */}
+              <div className="overflow-y-auto flex-1 overscroll-contain px-5 sm:px-7 py-5 space-y-5">
 
-                {/* Foto */}
+                {/* Foto — avatar redondo no preview */}
                 <div>
                   <label className={LABEL_CLS}>Foto do Profissional</label>
-                  <label className="relative flex items-center gap-4 p-4 border border-[#2A2A2A] bg-[#0D0D0D] cursor-pointer hover:border-[#C9A84C40] transition-colors group">
-                    <div className="w-14 h-14 shrink-0 overflow-hidden border border-[#1A1A1A] flex items-center justify-center bg-[#1A1A1A]">
+                  <label className="flex items-center gap-4 p-4 rounded-xl border border-[#1E1E1E] bg-[#0D0D0D] cursor-pointer hover:border-[#C9A84C25] transition-all duration-200 group">
+                    <div className="w-14 h-14 shrink-0 overflow-hidden rounded-full border-2 border-[#2A2A2A] flex items-center justify-center bg-[#141414] group-hover:border-[#C9A84C30] transition-colors duration-200">
                       {preview ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={preview} alt="preview" className="w-full h-full object-cover object-top" />
+                        <img src={preview} alt="preview" className="w-full h-full object-cover" />
                       ) : (
-                        <ImageIcon className="w-5 h-5 text-[#3A3A3A]" strokeWidth={1.5} />
+                        <ImageIcon className="w-5 h-5 text-[#2A2A2A]" strokeWidth={1.5} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[#6B6760] group-hover:text-[#A8A49E] transition-colors truncate">
+                      <p className="text-sm text-[#4A4A4A] group-hover:text-[#A8A49E] transition-colors truncate">
                         {arquivo ? arquivo.name : "Selecionar imagem…"}
                       </p>
-                      <p className="text-[10px] text-[#3A3A3A] mt-1">JPG, PNG, WEBP</p>
+                      <p className="font-mono text-[9px] text-[#2A2A2A] mt-1">JPG, PNG, WEBP</p>
                     </div>
-                    <Upload className="w-5 h-5 text-[#3A3A3A] group-hover:text-[#C9A84C] transition-colors shrink-0" strokeWidth={1.5} />
+                    <Upload className="w-4 h-4 text-[#2A2A2A] group-hover:text-[#C9A84C] transition-colors shrink-0" strokeWidth={1.5} />
                     <input type="file" accept="image/*" onChange={handleArquivo} className="sr-only" />
                   </label>
                 </div>
@@ -831,23 +1161,24 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                       placeholder="••••••••"
                       className={INPUT_CLS}
                     />
-                    <button
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => setMostrarSenha((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B6760] hover:text-[#A8A49E] transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#141414] transition-all duration-150"
                     >
                       {mostrarSenha
                         ? <EyeOff className="w-4 h-4" strokeWidth={1.5} />
                         : <Eye    className="w-4 h-4" strokeWidth={1.5} />
                       }
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
                 {view === "cadastro" && (
-                  <div className="flex items-center gap-2 py-3 px-4 bg-[#0D0D0D] border border-[#1A1A1A]">
-                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#6B6760]">Role</span>
-                    <span className="ml-auto text-[10px] font-bold tracking-[0.2em] uppercase text-[#C9A84C] border border-[#C9A84C40] px-2 py-1">
+                  <div className="flex items-center gap-2 py-3 px-4 rounded-xl bg-[#0D0D0D] border border-[#141414]">
+                    <span className="font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-[#3A3A3A]">Role inicial</span>
+                    <span className="ml-auto font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-[#C9A84C] border border-[#C9A84C30] bg-[#C9A84C08] px-2 py-1 rounded-full">
                       BARBER
                     </span>
                   </div>
@@ -855,13 +1186,13 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 
                 <AnimatePresence>
                   {erro && (
-                    <motion.p
+                    <motion.div
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                      className="text-[11px] text-red-500 flex items-center gap-1.5"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-950/15 border border-red-900/25"
                     >
-                      <span className="w-1 h-1 rounded-full bg-red-500 shrink-0" />
-                      {erro}
-                    </motion.p>
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                      <span className="font-mono text-[10px] text-red-400">{erro}</span>
+                    </motion.div>
                   )}
                 </AnimatePresence>
 
@@ -869,32 +1200,33 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                   {sucesso && (
                     <motion.div
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="flex items-center gap-2 py-2"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-emerald-950/15 border border-emerald-900/25"
                     >
-                      <Check className="w-4 h-4 text-[#4ADE80]" strokeWidth={2.5} />
-                      <span className="text-[11px] text-[#4ADE80]">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" strokeWidth={2.5} />
+                      <span className="font-mono text-[10px] text-emerald-400">
                         {view === "cadastro" ? "Profissional cadastrado!" : "Dados atualizados!"}
                       </span>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                <button
+                <motion.button
                   onClick={handleSalvar}
                   disabled={loading || sucesso}
+                  whileTap={!loading && !sucesso ? { scale: 0.98 } : {}}
                   className={cn(
-                    "w-full flex items-center justify-center gap-2.5 h-14 mt-2",
-                    "text-sm font-bold tracking-[0.15em] uppercase transition-all duration-200",
+                    "w-full flex items-center justify-center gap-2.5 h-14 mt-2 rounded-xl",
+                    "font-mono text-sm font-bold tracking-[0.15em] uppercase transition-all duration-200",
                     loading || sucesso
-                      ? "bg-[#1A1A1A] text-[#3A3A3A] cursor-not-allowed"
-                      : "bg-[#C9A84C] text-[#0B0B0B] hover:bg-[#E6C97A] active:scale-[0.98]"
+                      ? "bg-[#141414] text-[#2A2A2A] cursor-not-allowed border border-[#1A1A1A]"
+                      : "bg-amber-500 text-[#0B0B0B] hover:bg-amber-400 hover:shadow-[0_0_24px_0_#C9A84C35] active:scale-[0.98]"
                   )}
                 >
                   {loading
                     ? <><Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} />Salvando...</>
                     : <><Check className="w-3.5 h-3.5" strokeWidth={2.5} />{view === "cadastro" ? "Cadastrar Profissional" : "Salvar Alterações"}</>
                   }
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}
@@ -905,240 +1237,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   TeamSwitcher
-══════════════════════════════════════════════════════════════════ */
-function TeamSwitcher({ atual, isOwner }: { atual: string; isOwner: boolean }) {
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin");
-  };
-
-  return (
-    <div className="flex items-center justify-between w-full h-16 px-6 bg-[#0B0B0B] border-b border-neutral-800 relative z-10">
-      <div className="flex items-center gap-3">
-        {/* OWNER vê e navega entre todos os slugs; BARBER vê só o próprio nome */}
-        {isOwner
-          ? TODOS_SLUGS.map((slug) => (
-              <Link
-                key={slug}
-                href={`/admin/${slug}`}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-semibold tracking-wider uppercase transition-all duration-200",
-                  slug === atual ? "text-[#0B0B0B] bg-[#C9A84C]" : "text-neutral-400 hover:text-neutral-200"
-                )}
-              >
-                {PRIMEIRO_NOME[slug] ?? slug}
-              </Link>
-            ))
-          : (
-              <span className="px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#0B0B0B] bg-[#C9A84C]">
-                {PRIMEIRO_NOME[atual] ?? atual}
-              </span>
-            )
-        }
-      </div>
-      <div className="flex items-center gap-6">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-xs font-semibold tracking-wider text-neutral-400 hover:text-amber-500 transition-colors cursor-pointer"
-        >
-          Sair
-          <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   MetricCard
-══════════════════════════════════════════════════════════════════ */
-function MetricCard({
-  icon, label, value, sub, dourado = false,
-}: {
-  icon: React.ReactNode; label: string; value: string; sub: string; dourado?: boolean;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={cn("bg-[#121212] border p-3 flex flex-col gap-1", dourado ? "border-[#C9A84C20]" : "border-[#1E1E1E]")}
-    >
-      <div className="flex items-center gap-1.5">
-        {icon}
-        <span className="text-[9px] text-[#6B6760] tracking-wider uppercase truncate">{label}</span>
-      </div>
-      <p className={cn("font-display font-semibold leading-tight break-all", dourado ? "text-[#C9A84C] text-[13px]" : "text-[#F0EDE8] text-lg")}>
-        {value}
-      </p>
-      <p className="text-[9px] text-[#3A3A3A] tracking-wide">{sub}</p>
-    </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   AgendaTimeline
-══════════════════════════════════════════════════════════════════ */
-function AgendaTimeline({
-  agendamentos, onMudarStatus,
-}: {
-  agendamentos: Agendamento[];
-  onMudarStatus: (id: string, s: Status) => void;
-}) {
-  return (
-    <div className="relative">
-      <div className="absolute left-[38px] top-5 bottom-5 w-px bg-gradient-to-b from-[#C9A84C20] via-[#1E1E1E] to-transparent" />
-      <div className="space-y-2.5">
-        {agendamentos.map((ag, i) => (
-          <motion.div
-            key={ag.id}
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.25 }}
-          >
-            <AgendamentoCard ag={ag} onMudarStatus={onMudarStatus} />
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── AgendamentoCard ────────────────────────────────────────────── */
-function AgendamentoCard({
-  ag, onMudarStatus,
-}: {
-  ag: Agendamento;
-  onMudarStatus: (id: string, s: Status) => void;
-}) {
-  const [expandido, setExpandido] = useState(false);
-  const { label, cls } = STATUS_CONFIG[ag.status];
-  const bloqueado = ag.status === "bloqueado";
-
-  const waUrl = ag.whatsapp
-    ? `https://wa.me/${ag.whatsapp}?text=${encodeURIComponent(
-        `Olá ${ag.cliente}! Passando para informar um aviso sobre seu agendamento das ${ag.horario} aqui na Inspire Barber Studio.`
-      )}`
-    : null;
-
-  return (
-    <div className="flex gap-3 items-start">
-      <div className="w-[76px] shrink-0 flex flex-col items-center gap-1.5 pt-3">
-        <span className={cn("font-display text-sm font-semibold tabular-nums", bloqueado ? "text-[#2E2E2E]" : "text-[#C9A84C]")}>
-          {ag.horario}
-        </span>
-        <div className={cn(
-          "w-2.5 h-2.5 rounded-full border-2 z-10",
-          ag.status === "concluido"  ? "bg-[#4ADE80] border-[#4ADE80]" :
-          ag.status === "confirmado" ? "bg-[#C9A84C] border-[#C9A84C]" :
-                                       "bg-[#1A1A1A] border-[#2A2A2A]"
-        )} />
-      </div>
-
-      <div className={cn("flex-1 bg-[#121212] border overflow-hidden", bloqueado ? "border-[#161616] opacity-40" : "border-[#1E1E1E]")}>
-        <button
-          className="w-full text-left p-3"
-          onClick={() => !bloqueado && setExpandido((v) => !v)}
-          disabled={bloqueado}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <span className={cn("inline-flex items-center px-2 py-0.5 mb-1.5 text-[10px] font-semibold border", cls)}>
-                {label}
-              </span>
-              <p className={cn("font-semibold text-sm leading-tight truncate", bloqueado ? "text-[#2E2E2E]" : "text-[#F0EDE8]")}>
-                {bloqueado ? "Horário indisponível" : ag.cliente}
-              </p>
-              <p className="text-[11px] text-[#6B6760] mt-0.5 truncate">{ag.servico}</p>
-            </div>
-            {!bloqueado && (
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="font-display text-sm font-semibold text-[#C9A84C]">{formatarPreco(ag.preco)}</span>
-                <motion.div animate={{ rotate: expandido ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                  <ChevronRight className="w-4 h-4 text-[#3A3A3A]" strokeWidth={1.5} />
-                </motion.div>
-              </div>
-            )}
-          </div>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {expandido && !bloqueado && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              style={{ overflow: "hidden" }}
-            >
-              <div className="border-t border-[#1A1A1A] px-3 pt-3 pb-3 space-y-3">
-                {ag.tags.length > 0 && (
-                  <div>
-                    <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#2E2E2E] mb-1.5">
-                      Preferências do Cliente
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {ag.tags.map((tag) => (
-                        <span key={tag} className="inline-flex items-center px-2 py-1 text-[10px] text-[#C9A84C70] border border-[#C9A84C18] bg-[#C9A84C06]">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {waUrl && (
-                    <a
-                      href={waUrl} target="_blank" rel="noopener noreferrer"
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-2",
-                        "text-[11px] font-semibold text-[#4ADE80]",
-                        "border border-[#4ADE8025] bg-[#4ADE8008]",
-                        "active:scale-95 transition-all duration-150"
-                      )}
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" strokeWidth={2} />
-                      WhatsApp
-                    </a>
-                  )}
-                  {ag.status === "confirmado" && (
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => onMudarStatus(ag.id, "concluido")}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-2",
-                        "text-[11px] font-semibold text-[#C9A84C]",
-                        "border border-[#C9A84C30] bg-[#C9A84C08]",
-                        "hover:bg-[#C9A84C12] transition-colors"
-                      )}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={2} />
-                      Concluir
-                    </motion.button>
-                  )}
-                  {ag.status === "concluido" && (
-                    <button
-                      onClick={() => onMudarStatus(ag.id, "confirmado")}
-                      className="text-[10px] text-[#3A3A3A] hover:text-[#6B6760] transition-colors px-2 py-1"
-                    >
-                      ↩ Reverter
-                    </button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   BloqueioModal
+   BloqueioModal — bottom sheet para bloqueio de horário
 ══════════════════════════════════════════════════════════════════ */
 function BloqueioModal({
   nomeBarbeiro, onClose, onConfirmar,
@@ -1157,7 +1256,7 @@ function BloqueioModal({
     const dLabel = new Date(data + "T12:00:00").toLocaleDateString("pt-BR", {
       weekday: "short", day: "2-digit", month: "short",
     });
-    onConfirmar(inicio, `${dLabel} • ${inicio}–${fim}`);
+    onConfirmar(inicio, `${dLabel} · ${inicio}–${fim}`);
   };
 
   return (
@@ -1165,33 +1264,40 @@ function BloqueioModal({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
       />
       <motion.div
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 32 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-[#111111] border-t border-[#2A2A2A] max-w-2xl mx-auto"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A] border-t border-[#1A1A1A] rounded-t-2xl max-w-2xl mx-auto"
       >
-        <div className="w-10 h-1 bg-[#2A2A2A] rounded-full mx-auto mt-4 mb-5" />
+        <div className="w-8 h-1 bg-[#1E1E1E] rounded-full mx-auto mt-4 mb-5" />
         <div className="px-5 pb-10 space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-[#6B6760]" strokeWidth={1.5} />
+                <Lock className="w-4 h-4 text-[#4A4A4A]" strokeWidth={1.5} />
                 <h3 className="font-display text-lg font-semibold text-[#F0EDE8]">Bloquear Horário</h3>
               </div>
-              <p className="text-[11px] text-[#6B6760] mt-0.5">Agenda de {nomeBarbeiro}</p>
+              <p className="font-mono text-[10px] text-[#3A3A3A] mt-0.5 tracking-wide">Agenda de {nomeBarbeiro}</p>
             </div>
-            <button onClick={onClose} className="text-[#6B6760] hover:text-[#A8A49E] transition-colors p-1">
-              <X className="w-5 h-5" strokeWidth={1.5} />
-            </button>
+            <motion.button
+              onClick={onClose}
+              whileTap={{ scale: 0.9 }}
+              className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#141414] transition-all duration-150"
+            >
+              <X className="w-4 h-4" strokeWidth={1.5} />
+            </motion.button>
           </div>
 
           <div>
-            <label className="block text-[10px] font-semibold tracking-[0.2em] uppercase text-[#6B6760] mb-2">Data</label>
+            <label className="block font-mono text-[9px] font-semibold tracking-[0.25em] uppercase text-[#4A4A4A] mb-2">
+              Data
+            </label>
             <input
-              type="date" min={hoje} value={data} onChange={(e) => setData(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-[#2A2A2A] focus:border-[#C9A84C] px-4 py-3.5 text-[16px] sm:text-sm text-[#F0EDE8] outline-none [color-scheme:dark] transition-colors"
+              type="date" min={hoje} value={data}
+              onChange={(e) => setData(e.target.value)}
+              className="w-full bg-[#0D0D0D] border border-[#1E1E1E] rounded-lg focus:border-[#C9A84C] px-4 py-3.5 text-[16px] sm:text-sm text-[#F0EDE8] outline-none [color-scheme:dark] transition-colors"
             />
           </div>
 
@@ -1201,25 +1307,31 @@ function BloqueioModal({
               { label: "Até", value: fim,    set: setFim    },
             ].map(({ label, value, set }) => (
               <div key={label}>
-                <label className="block text-[10px] font-semibold tracking-[0.2em] uppercase text-[#6B6760] mb-2">{label}</label>
+                <label className="block font-mono text-[9px] font-semibold tracking-[0.25em] uppercase text-[#4A4A4A] mb-2">
+                  {label}
+                </label>
                 <input
-                  type="time" value={value} onChange={(e) => set(e.target.value)}
-                  className="w-full bg-[#0D0D0D] border border-[#2A2A2A] focus:border-[#C9A84C] px-4 py-3.5 text-[16px] sm:text-sm text-[#F0EDE8] outline-none [color-scheme:dark] transition-colors"
+                  type="time" value={value}
+                  onChange={(e) => set(e.target.value)}
+                  className="w-full bg-[#0D0D0D] border border-[#1E1E1E] rounded-lg focus:border-[#C9A84C] px-4 py-3.5 text-[16px] sm:text-sm text-[#F0EDE8] outline-none [color-scheme:dark] transition-colors"
                 />
               </div>
             ))}
           </div>
 
-          <button
-            onClick={confirmar} disabled={!data}
+          <motion.button
+            onClick={confirmar}
+            disabled={!data}
+            whileTap={data ? { scale: 0.98 } : {}}
             className={cn(
-              "w-full py-4 text-sm font-semibold tracking-[0.15em] uppercase transition-all duration-300",
-              data ? "text-[#0B0B0B] bg-[#C9A84C] hover:bg-[#E6C97A] active:scale-[0.98]"
-                   : "text-[#3A3A3A] bg-[#1A1A1A] cursor-not-allowed"
+              "w-full h-14 rounded-xl font-mono text-sm font-bold tracking-[0.2em] uppercase transition-all duration-300",
+              data
+                ? "text-[#0B0B0B] bg-amber-500 hover:bg-amber-400 active:scale-[0.98]"
+                : "text-[#2A2A2A] bg-[#141414] cursor-not-allowed border border-[#1A1A1A]"
             )}
           >
             Confirmar Bloqueio
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </>
@@ -1227,28 +1339,28 @@ function BloqueioModal({
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   Página 404 — Profissional não encontrado
+   Profissional não encontrado
 ══════════════════════════════════════════════════════════════════ */
 function ProfissionalNaoEncontrado({ slug }: { slug: string }) {
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[#0B0B0B] flex flex-col items-center justify-center px-5 text-center">
       <motion.div
-        initial={{ opacity: 0, scale: 0.92 }}
+        initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35 }}
         className="max-w-sm"
       >
-        <div className="w-14 h-14 flex items-center justify-center bg-[#1A1A1A] border border-[#2A2A2A] mx-auto mb-6">
-          <AlertTriangle className="w-6 h-6 text-[#6B6760]" strokeWidth={1.5} />
+        <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#141414] border border-[#1E1E1E] mx-auto mb-6">
+          <AlertTriangle className="w-6 h-6 text-[#3A3A3A]" strokeWidth={1.5} />
         </div>
         <h1 className="font-display text-2xl font-semibold text-[#F0EDE8] mb-2">
           Profissional não encontrado
         </h1>
-        <p className="text-[#6B6760] text-sm leading-relaxed mb-1">
-          Nenhum profissional mapeado com o slug{" "}
-          <code className="text-[#C9A84C] bg-[#C9A84C10] px-1.5 py-0.5 text-[11px]">{slug}</code>.
+        <p className="text-[#4A4A4A] text-sm leading-relaxed mb-1">
+          Nenhum profissional com o slug{" "}
+          <code className="text-[#C9A84C] bg-[#C9A84C0D] px-1.5 py-0.5 rounded font-mono text-[11px]">{slug}</code>.
         </p>
-        <p className="text-[#3A3A3A] text-xs mb-8">
+        <p className="font-mono text-[10px] text-[#2A2A2A] mb-8">
           Slugs disponíveis:{" "}
           {TODOS_SLUGS.map((s) => (
             <Link key={s} href={`/admin/${s}`} className="text-[#C9A84C] hover:text-[#E6C97A] transition-colors">
@@ -1258,10 +1370,10 @@ function ProfissionalNaoEncontrado({ slug }: { slug: string }) {
         </p>
         <Link
           href="/admin"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[#C9A84C] text-[#0B0B0B] text-sm font-semibold tracking-[0.15em] uppercase hover:bg-[#E6C97A] transition-all duration-300"
+          className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 text-[#0B0B0B] font-mono text-sm font-bold tracking-[0.15em] uppercase hover:bg-amber-400 transition-all duration-300"
         >
           <Scissors className="w-4 h-4" strokeWidth={2} />
-          Ver Equipe
+          Ir para Login
         </Link>
       </motion.div>
     </div>

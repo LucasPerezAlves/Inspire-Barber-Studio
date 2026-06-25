@@ -153,3 +153,25 @@ body {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Brand ticker: infinite horizontal scroll ────────────────── */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-ticker {
+  animation: ticker 28s linear infinite;
+  will-change: transform;
+}
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* ── Scrollbar hide utility ──────────────────────────────────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
