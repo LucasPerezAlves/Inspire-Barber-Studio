@@ -361,9 +361,15 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
   const toggleRole = async (prof: ProfDB) => {
     setToggleLoadId(prof.id);
     const newRole: "OWNER" | "BARBER" = prof.role === "OWNER" ? "BARBER" : "OWNER";
-    const { error } = await supabase.from("profissionais").update({ role: newRole }).eq("id", prof.id);
-    if (!error) {
+    const { data: atualizado, error } = await supabase
+      .from("profissionais")
+      .update({ role: newRole })
+      .eq("id", prof.id)
+      .select("id");
+    if (!error && atualizado && atualizado.length > 0) {
       setProfissionais((prev) => prev.map((p) => p.id === prof.id ? { ...p, role: newRole } : p));
+    } else if (!error) {
+      console.error("[toggleRole] UPDATE retornou 0 linhas — verifique as políticas RLS do Supabase.");
     }
     setToggleLoadId(null);
   };
@@ -399,8 +405,12 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
     if (!deletandoId) return;
     setDeletandoLoad(true);
     await supabase.from("agendamentos").update({ profissional_id: null }).eq("profissional_id", deletandoId);
-    await supabase.from("profissionais").delete().eq("id", deletandoId);
-    setProfissionais((prev) => prev.filter((p) => p.id !== deletandoId));
+    const { error: delErr } = await supabase.from("profissionais").delete().eq("id", deletandoId);
+    if (!delErr) {
+      setProfissionais((prev) => prev.filter((p) => p.id !== deletandoId));
+    } else {
+      console.error("[confirmarExclusao] DELETE bloqueado:", delErr.message);
+    }
     setDeletandoId(null);
     setDeletandoLoad(false);
   };
@@ -454,8 +464,16 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
         if (form.senha) payload.password = form.senha;
         if (fotoUrl !== undefined) payload.foto_url = fotoUrl;
 
-        const { error } = await supabase.from("profissionais").update(payload).eq("id", profSelecionado.id);
+        const { data: atualizado, error } = await supabase
+          .from("profissionais")
+          .update(payload)
+          .eq("id", profSelecionado.id)
+          .select("id");
         if (error) { setErro(error.message); return; }
+        if (!atualizado || atualizado.length === 0) {
+          setErro("Permissão negada pelo banco. Adicione a política RLS de UPDATE na tabela profissionais.");
+          return;
+        }
 
         setProfissionais((prev) =>
           prev.map((p) => p.id === profSelecionado.id
