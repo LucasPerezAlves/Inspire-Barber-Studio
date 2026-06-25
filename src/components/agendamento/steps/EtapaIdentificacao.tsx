@@ -70,7 +70,8 @@ export function EtapaIdentificacao({
   }, []); // dispara uma única vez na montagem
 
   /* ── Validação (usada apenas no fluxo anônimo) ──────────────────── */
-  const [touched, setTouched] = useState({ nome: false, whatsapp: false });
+  const [touched,   setTouched]   = useState({ nome: false, whatsapp: false });
+  const [honeypot,  setHoneypot]  = useState("");
 
   const nomeValido     = nome.trim().split(" ").length >= 2 && nome.trim().length >= 5;
   const whatsappValido = whatsapp.replace(/\D/g, "").length === 11;
@@ -84,6 +85,9 @@ export function EtapaIdentificacao({
   /* ── Submit ─────────────────────────────────────────────────────── */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    /* Honeypot: campo invisível preenchido → bot detectado, rejeita silenciosamente */
+    if (honeypot) return;
 
     /* Usuário logado: dados já garantidos, confirma direto */
     if (session) { onConfirmar(); return; }
@@ -182,6 +186,17 @@ export function EtapaIdentificacao({
 
       {/* ── Seção de dados de contato (condicional) ──────────────── */}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {/* Honeypot — invisível para humanos, detecta automação */}
+        <input
+          type="text"
+          name="website"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+        />
 
         <AnimatePresence mode="wait" initial={false}>
 

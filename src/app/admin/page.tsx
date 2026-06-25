@@ -8,75 +8,49 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Scissors, AlertCircle, ArrowRight, Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase, supabaseConfigurado } from "@/lib/supabase";
-
-/* ── Helper ─────────────────────────────────────────────────────── */
-function saveAdminSession(slug: string, nome: string, role: string) {
-  try {
-    sessionStorage.setItem(
-      "inspire_admin_session",
-      JSON.stringify({ slug, nome, role })
-    );
-  } catch {}
-}
 
 /* ══════════════════════════════════════════════════════════════════
    Portal do Profissional — Login com E-mail e Senha
+   Autenticação via API Route → HttpOnly Cookie (jose JWT)
 ══════════════════════════════════════════════════════════════════ */
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email,       setEmail]       = useState("");
-  const [senha,       setSenha]       = useState("");
+  const [email,        setEmail]        = useState("");
+  const [senha,        setSenha]        = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [erro,        setErro]        = useState("");
-  const [loading,     setLoading]     = useState(false);
+  const [erro,         setErro]         = useState("");
+  const [loading,      setLoading]      = useState(false);
+  /* Honeypot: invisível para humanos, bots costumam preencher */
+  const [website,      setWebsite]      = useState("");
 
   const podeEnviar = email.trim().length > 0 && senha.length > 0;
 
   const handleAcessar = async () => {
-    if (!podeEnviar) return;
+    if (!podeEnviar || loading) return;
+    /* Se o honeypot foi preenchido, rejeita silenciosamente */
+    if (website) { setLoading(false); return; }
+
     setErro("");
     setLoading(true);
 
-    if (!supabaseConfigurado()) {
-      setErro("Configuração do servidor incompleta. Contate o suporte.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase
-        .from("profissionais")
-        .select("slug, nome, role, password")
-        .eq("email", email.toLowerCase().trim())
-        .single();
+      const res = await fetch("/api/admin/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email, password: senha, website }),
+      });
 
-      if (error) {
-        /* PGRST116 = nenhuma linha encontrada (single() sem resultado) */
-        if (error.code === "PGRST116") {
-          setErro("E-mail não cadastrado.");
-        } else {
-          console.error("[AdminLogin] Supabase error:", error.code, error.message);
-          setErro("Erro ao verificar credenciais. Tente novamente.");
-        }
+      const json = await res.json() as { ok?: boolean; slug?: string; error?: string };
+
+      if (!res.ok) {
+        setErro(json.error ?? "Erro ao acessar. Tente novamente.");
         return;
       }
 
-      if (!data) {
-        setErro("E-mail não cadastrado.");
-        return;
-      }
-
-      if (data.password !== senha) {
-        setErro("Senha incorreta.");
-        return;
-      }
-
-      saveAdminSession(data.slug, data.nome, data.role);
-      router.push(`/admin/${data.slug}`);
+      /* Cookie HttpOnly já foi setado pelo servidor — só redireciona */
+      router.push(`/admin/${json.slug}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[AdminLogin] Erro de rede:", msg);
       if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("network")) {
         setErro("Sem conexão com o servidor. Verifique sua internet.");
       } else {
@@ -127,6 +101,18 @@ export default function AdminLoginPage() {
 
             {/* Campos */}
             <div className="space-y-3">
+
+              {/* Honeypot — invisível para humanos, detecta bots */}
+              <input
+                type="text"
+                name="website"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+              />
 
               {/* E-mail */}
               <div>
@@ -234,7 +220,7 @@ export default function AdminLoginPage() {
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#C9A84C30] shrink-0" strokeWidth={1.5} />
                 <p className="text-[10px] text-[#2E2E2E]">
-                  Acesso restrito à equipe Inspire Barber.
+                  Sessão protegida por cookie HttpOnly · JWT expira em 4h
                 </p>
               </div>
             </div>
