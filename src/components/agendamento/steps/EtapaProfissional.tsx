@@ -7,6 +7,24 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { supabase, supabaseConfigurado } from "@/lib/supabase";
 
+/* ─── Normaliza qualquer formato de foto vindo do banco ───────────
+   Suporta:
+   - URL completa já salva pelo getPublicUrl()
+   - Apenas o nome do arquivo: "photo.jpg"
+   - Caminho relativo com bucket: "barbeiros-fotos/photo.jpg"
+──────────────────────────────────────────────────────────────────── */
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/barbeiros-fotos`;
+
+function getFotoSrc(foto: string | null): string | null {
+  if (!foto || !SUPABASE_URL) return null;
+  if (foto.startsWith("https://") || foto.startsWith("http://")) return foto;
+  if (foto.startsWith("barbeiros-fotos/")) {
+    return `${SUPABASE_URL}/storage/v1/object/public/${foto}`;
+  }
+  return `${STORAGE_BASE}/${foto}`;
+}
+
 interface Profissional {
   id: string;
   nome: string;
@@ -36,7 +54,6 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
     setCarregando(true);
     setErro(null);
 
-    /* Guarda rápida: cliente sem credenciais reais nunca vai funcionar */
     if (!supabaseConfigurado()) {
       console.error("[EtapaProfissional] Supabase não configurado — verifique .env.local");
       setErro("Configuração incompleta. Contate o suporte.");
@@ -51,7 +68,6 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
         .order("nome", { ascending: true });
 
       if (error) {
-        /* Erro do lado do Supabase (RLS, schema inválido, etc.) */
         console.error("[EtapaProfissional] Erro Supabase:", error.code, error.message);
         setErro("Não foi possível carregar os profissionais.");
         return;
@@ -66,10 +82,8 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
 
       setProfissionais([QUALQUER, ...lista]);
     } catch (err: unknown) {
-      /* TypeError: Failed to fetch — rede caída, CORS, URL errada */
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[EtapaProfissional] Erro de rede:", msg);
-
       if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("network")) {
         setErro("Sem conexão com o servidor. Verifique sua internet e tente novamente.");
       } else {
@@ -86,7 +100,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
 
   const handleRetry = () => setTentativas((n) => n + 1);
 
-  /* ── Estados de feedback ──────────────────────────────────────── */
+  /* ── Conteúdo principal ─────────────────────────────────────────── */
   const conteudo = () => {
     if (carregando) {
       return (
@@ -137,7 +151,6 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
             Tentar novamente
           </button>
 
-          {/* Mostra só "Qualquer" para o usuário não ficar bloqueado */}
           <div className="w-full mt-2">
             <BarberCard
               profissional={QUALQUER}
@@ -167,7 +180,6 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
 
   return (
     <div className="pt-2 pb-10">
-      {/* Título */}
       <div className="py-5 border-b border-[#1A1A1A] mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -178,7 +190,6 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
               Toque em um card para avançar automaticamente
             </p>
           </div>
-          {/* Spinner inline de reconexão durante retry */}
           {carregando && tentativas > 0 && (
             <Loader2 className="w-4 h-4 text-[#C9A84C] animate-spin shrink-0" strokeWidth={1.5} />
           )}
@@ -196,7 +207,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
   );
 }
 
-/* ─── Card do barbeiro ────────────────────────────────────────── */
+/* ─── Card do barbeiro ─────────────────────────────────────────── */
 function BarberCard({
   profissional,
   selecionado,
@@ -208,7 +219,11 @@ function BarberCard({
   onSelecionar: (id: string) => void;
   delay: number;
 }) {
+  const [imgError, setImgError] = useState(false);
+
   const isQualquer = profissional.id === "qualquer";
+  const fotoSrc    = getFotoSrc(profissional.foto);
+  const mostraFoto = !isQualquer && fotoSrc !== null && !imgError;
 
   return (
     <motion.button
@@ -226,16 +241,30 @@ function BarberCard({
           : "border-[#1E1E1E] bg-[#111111] hover:border-[#C9A84C40] hover:bg-[#141414]"
       )}
     >
-      {/* Foto / ícone */}
+      {/* Foto / ícone ──────────────────────────────────────────────
+          Mobile  : w-20 h-20 (80×80 px fixo — suficiente para fill)
+          Desktop : aspect-square sem h-auto — com fill, h-auto colapsa
+                    o pai para 0 pois filhos absolutos saem do fluxo.
+                    aspect-ratio sozinho calcula a altura a partir da largura.
+      ─────────────────────────────────────────────────────────────── */}
       <div
         className={cn(
           "relative shrink-0 overflow-hidden",
-          "w-20 h-20 sm:w-full sm:h-auto sm:aspect-square",
+          "w-20 h-20 sm:w-full sm:aspect-square",
           "transition-all duration-300",
           selecionado && "ring-2 ring-[#C9A84C] ring-offset-2 ring-offset-[#0B0B0B]"
         )}
       >
-        {isQualquer || !profissional.foto ? (
+        {mostraFoto ? (
+          <Image
+            src={fotoSrc}
+            alt={profissional.nome}
+            fill
+            sizes="(max-width: 640px) 80px, 300px"
+            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgError(true)}
+          />
+        ) : (
           <div className="w-full h-full bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] border border-[#2A2A2A] flex items-center justify-center">
             <UserRound
               className={cn(
@@ -245,14 +274,6 @@ function BarberCard({
               strokeWidth={1}
             />
           </div>
-        ) : (
-          <Image
-            src={profissional.foto}
-            alt={profissional.nome}
-            fill
-            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 80px, 200px"
-          />
         )}
 
         {selecionado && (
@@ -264,7 +285,7 @@ function BarberCard({
         )}
       </div>
 
-      {/* Nome + especialidade */}
+      {/* Texto */}
       <div className="flex-1 sm:w-full sm:flex-none">
         <p
           className={cn(
