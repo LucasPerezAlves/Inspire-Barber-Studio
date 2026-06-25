@@ -8,7 +8,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Scissors, AlertCircle, ArrowRight, Loader2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseConfigurado } from "@/lib/supabase";
 
 /* ── Helper ─────────────────────────────────────────────────────── */
 function saveAdminSession(slug: string, nome: string, role: string) {
@@ -38,6 +38,12 @@ export default function AdminLoginPage() {
     setErro("");
     setLoading(true);
 
+    if (!supabaseConfigurado()) {
+      setErro("Configuração do servidor incompleta. Contate o suporte.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("profissionais")
@@ -45,7 +51,18 @@ export default function AdminLoginPage() {
         .eq("email", email.toLowerCase().trim())
         .single();
 
-      if (error || !data) {
+      if (error) {
+        /* PGRST116 = nenhuma linha encontrada (single() sem resultado) */
+        if (error.code === "PGRST116") {
+          setErro("E-mail não cadastrado.");
+        } else {
+          console.error("[AdminLogin] Supabase error:", error.code, error.message);
+          setErro("Erro ao verificar credenciais. Tente novamente.");
+        }
+        return;
+      }
+
+      if (!data) {
         setErro("E-mail não cadastrado.");
         return;
       }
@@ -57,9 +74,14 @@ export default function AdminLoginPage() {
 
       saveAdminSession(data.slug, data.nome, data.role);
       router.push(`/admin/${data.slug}`);
-    } catch (err) {
-      console.error("[AdminLogin]", err);
-      setErro("Erro de conexão. Tente novamente.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[AdminLogin] Erro de rede:", msg);
+      if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("network")) {
+        setErro("Sem conexão com o servidor. Verifique sua internet.");
+      } else {
+        setErro("Erro de conexão. Tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
