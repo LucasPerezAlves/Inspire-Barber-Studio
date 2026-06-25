@@ -99,59 +99,48 @@ function mapAgendamento(a: AgendamentoDB): Agendamento {
 /* ══════════════════════════════════════════════════════════════════
    Componente principal exportado
 ══════════════════════════════════════════════════════════════════ */
-export function AdminPanel({ slug }: { slug: string }) {
+export function AdminPanel({ slug, role }: { slug: string; role: "OWNER" | "BARBER" }) {
   const key = slug.toLowerCase();
   const [dados,      setDados]      = useState<BarbeiroData | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    async function fetchSupabase() {
+    /* IDOR FIX: dados buscados pelo servidor com slug do JWT.
+       BARBERs sempre recebem seus próprios dados, mesmo que o param
+       da URL seja adulterado. OWNERs podem ver qualquer painel. */
+    async function fetchPanel() {
       try {
-        const { data: prof, error: errProf } = await supabase
-          .from("profissionais")
-          .select("id, nome, slug, especialidade")
-          .eq("slug", key)
-          .single();
+        const res  = await fetch(`/api/admin/painel?slug=${encodeURIComponent(key)}`);
+        const json = await res.json() as {
+          profissional?: { id: string; nome: string; slug: string; especialidade: string };
+          agendamentos?: import("@/lib/supabase").AgendamentoDB[];
+          error?: string;
+        };
 
-        if (errProf) {
-          console.error("[AdminPanel] Erro ao buscar profissional:", errProf.message);
+        if (!res.ok || !json.profissional) {
+          console.error("[AdminPanel] API retornou erro:", json.error);
           return;
         }
-        if (!prof) return;
-
-        const hoje      = new Date();
-        const inicioDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
-        const fimDia    = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
-
-        const { data: ags, error: errAgs } = await supabase
-          .from("agendamentos")
-          .select("*")
-          .eq("profissional_id", prof.id)
-          .gte("data_hora", inicioDia)
-          .lte("data_hora", fimDia)
-          .order("data_hora", { ascending: true });
-
-        if (errAgs) console.error("[AdminPanel] Erro ao buscar agendamentos:", errAgs.message);
 
         setDados({
-          slug:          prof.slug,
-          nome:          prof.nome,
-          especialidade: prof.especialidade ?? "Inspire Barber Studio",
-          agendamentos:  (ags ?? []).map(mapAgendamento),
+          slug:         json.profissional.slug,
+          nome:         json.profissional.nome,
+          especialidade: json.profissional.especialidade,
+          agendamentos: (json.agendamentos ?? []).map(mapAgendamento),
         });
       } catch (err) {
-        console.error("[AdminPanel] Erro inesperado:", err);
+        console.error("[AdminPanel] Erro de rede:", err);
       } finally {
         setCarregando(false);
       }
     }
-    fetchSupabase();
+    fetchPanel();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   if (carregando) return <PainelSkeleton />;
   if (!dados)     return <ProfissionalNaoEncontrado slug={slug} />;
-  return <Dashboard dados={dados} />;
+  return <Dashboard dados={dados} role={role} />;
 }
 
 /* ── Skeleton ───────────────────────────────────────────────────── */
@@ -169,7 +158,8 @@ function PainelSkeleton() {
 /* ══════════════════════════════════════════════════════════════════
    Dashboard interativo
 ══════════════════════════════════════════════════════════════════ */
-function Dashboard({ dados }: { dados: BarbeiroData }) {
+function Dashboard({ dados, role }: { dados: BarbeiroData; role: "OWNER" | "BARBER" }) {
+  const isOwner = role === "OWNER";
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>(dados.agendamentos);
   const [modalBloqueio, setModalBloqueio] = useState(false);
   const [modalEquipe,   setModalEquipe]   = useState(false);
@@ -198,7 +188,7 @@ function Dashboard({ dados }: { dados: BarbeiroData }) {
     <div className="min-h-screen bg-[#0B0B0B] pt-20">
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_60%_30%_at_50%_0%,#C9A84C05_0%,transparent_65%)] pointer-events-none" />
 
-      <TeamSwitcher atual={dados.slug} />
+      <TeamSwitcher atual={dados.slug} isOwner={isOwner} />
 
       <div className="relative max-w-2xl mx-auto px-4 pt-6 pb-28 z-10">
 
@@ -221,7 +211,7 @@ function Dashboard({ dados }: { dados: BarbeiroData }) {
           </div>
 
           {/* Botão exclusivo do dono */}
-          {dados.slug === "pablo" && (
+          {isOwner && (
             <div className="mt-4">
               <motion.button
                 onClick={() => setModalEquipe(true)}
@@ -348,30 +338,40 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 
   const fetchProfissionais = async () => {
     setLoadingLista(true);
-    const { data } = await supabase
-      .from("profissionais")
-      .select("id, nome, slug, especialidade, whatsapp, email, role, foto_url")
-      .order("nome", { ascending: true });
-    setProfissionais(data ?? []);
-    setLoadingLista(false);
+    try {
+      const res  = await fetch("/api/admin/profissionais");
+      const json = await res.json() as { profissionais?: ProfDB[]; error?: string };
+      setProfissionais(json.profissionais ?? []);
+    } catch {
+      /* lista fica vazia, o usuário pode tentar fechar e reabrir */
+    } finally {
+      setLoadingLista(false);
+    }
   };
 
   useEffect(() => { fetchProfissionais(); }, []);
 
   const toggleRole = async (prof: ProfDB) => {
     setToggleLoadId(prof.id);
-    const newRole: "OWNER" | "BARBER" = prof.role === "OWNER" ? "BARBER" : "OWNER";
-    const { data: atualizado, error } = await supabase
-      .from("profissionais")
-      .update({ role: newRole })
-      .eq("id", prof.id)
-      .select("id");
-    if (!error && atualizado && atualizado.length > 0) {
-      setProfissionais((prev) => prev.map((p) => p.id === prof.id ? { ...p, role: newRole } : p));
-    } else if (!error) {
-      console.error("[toggleRole] UPDATE retornou 0 linhas — verifique as políticas RLS do Supabase.");
+    try {
+      const res  = await fetch(`/api/admin/profissionais/${prof.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggleRole", currentRole: prof.role }),
+      });
+      const json = await res.json() as { ok?: boolean; role?: "OWNER" | "BARBER"; error?: string };
+      if (res.ok && json.role) {
+        setProfissionais((prev) =>
+          prev.map((p) => p.id === prof.id ? { ...p, role: json.role! } : p)
+        );
+      } else {
+        console.error("[toggleRole]", json.error);
+      }
+    } catch (err) {
+      console.error("[toggleRole] Erro de rede:", err);
+    } finally {
+      setToggleLoadId(null);
     }
-    setToggleLoadId(null);
   };
 
   const abrirEdicao = (prof: ProfDB) => {
@@ -404,15 +404,20 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
   const confirmarExclusao = async () => {
     if (!deletandoId) return;
     setDeletandoLoad(true);
-    await supabase.from("agendamentos").update({ profissional_id: null }).eq("profissional_id", deletandoId);
-    const { error: delErr } = await supabase.from("profissionais").delete().eq("id", deletandoId);
-    if (!delErr) {
-      setProfissionais((prev) => prev.filter((p) => p.id !== deletandoId));
-    } else {
-      console.error("[confirmarExclusao] DELETE bloqueado:", delErr.message);
+    try {
+      const res = await fetch(`/api/admin/profissionais/${deletandoId}`, { method: "DELETE" });
+      if (res.ok) {
+        setProfissionais((prev) => prev.filter((p) => p.id !== deletandoId));
+      } else {
+        const json = await res.json() as { error?: string };
+        console.error("[confirmarExclusao]", json.error);
+      }
+    } catch (err) {
+      console.error("[confirmarExclusao] Erro de rede:", err);
+    } finally {
+      setDeletandoId(null);
+      setDeletandoLoad(false);
     }
-    setDeletandoId(null);
-    setDeletandoLoad(false);
   };
 
   const handleSalvar = async () => {
@@ -438,42 +443,44 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
       }
 
       if (view === "cadastro") {
-        const { error } = await supabase.from("profissionais").insert({
-          nome:          form.nome.trim(),
-          especialidade: form.especialidade.trim() || null,
-          slug:          form.slug.toLowerCase().trim().replace(/\s+/g, "-"),
-          whatsapp:      form.whatsapp.replace(/\D/g, "") || null,
-          email:         form.email.toLowerCase().trim(),
-          password:      form.senha,
-          role:          "BARBER",
-          foto_url:      fotoUrl ?? null,
+        const res  = await fetch("/api/admin/profissionais", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome:          form.nome.trim(),
+            especialidade: form.especialidade.trim() || null,
+            slug:          form.slug.toLowerCase().trim().replace(/\s+/g, "-"),
+            whatsapp:      form.whatsapp.replace(/\D/g, "") || null,
+            email:         form.email.toLowerCase().trim(),
+            password:      form.senha,
+            foto_url:      fotoUrl ?? null,
+          }),
         });
-        if (error) { setErro(error.message); return; }
+        const json = await res.json() as { error?: string };
+        if (!res.ok) { setErro(json.error ?? "Erro ao criar profissional."); return; }
         setSucesso(true);
         await fetchProfissionais();
         setTimeout(() => { voltarLista(); setSucesso(false); }, 1600);
 
       } else if (view === "edicao" && profSelecionado) {
         const payload: Record<string, unknown> = {
+          action:        "update",
           nome:          form.nome.trim(),
           especialidade: form.especialidade.trim() || null,
           slug:          form.slug.toLowerCase().trim().replace(/\s+/g, "-"),
           whatsapp:      form.whatsapp.replace(/\D/g, "") || null,
           email:         form.email.toLowerCase().trim(),
         };
-        if (form.senha) payload.password = form.senha;
+        if (form.senha)            payload.password = form.senha;
         if (fotoUrl !== undefined) payload.foto_url = fotoUrl;
 
-        const { data: atualizado, error } = await supabase
-          .from("profissionais")
-          .update(payload)
-          .eq("id", profSelecionado.id)
-          .select("id");
-        if (error) { setErro(error.message); return; }
-        if (!atualizado || atualizado.length === 0) {
-          setErro("Permissão negada pelo banco. Adicione a política RLS de UPDATE na tabela profissionais.");
-          return;
-        }
+        const res  = await fetch(`/api/admin/profissionais/${profSelecionado.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json() as { error?: string };
+        if (!res.ok) { setErro(json.error ?? "Erro ao atualizar profissional."); return; }
 
         setProfissionais((prev) =>
           prev.map((p) => p.id === profSelecionado.id
@@ -900,30 +907,41 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
 /* ══════════════════════════════════════════════════════════════════
    TeamSwitcher
 ══════════════════════════════════════════════════════════════════ */
-function TeamSwitcher({ atual }: { atual: string }) {
+function TeamSwitcher({ atual, isOwner }: { atual: string; isOwner: boolean }) {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin");
+  };
+
   return (
     <div className="flex items-center justify-between w-full h-16 px-6 bg-[#0B0B0B] border-b border-neutral-800 relative z-10">
       <div className="flex items-center gap-3">
-        {TODOS_SLUGS.map((slug) => (
-          <Link
-            key={slug}
-            href={`/admin/${slug}`}
-            className={cn(
-              "px-3 py-1.5 text-xs font-semibold tracking-wider uppercase transition-all duration-200",
-              slug === atual ? "text-[#0B0B0B] bg-[#C9A84C]" : "text-neutral-400 hover:text-neutral-200"
-            )}
-          >
-            {PRIMEIRO_NOME[slug] ?? slug}
-          </Link>
-        ))}
+        {/* OWNER vê e navega entre todos os slugs; BARBER vê só o próprio nome */}
+        {isOwner
+          ? TODOS_SLUGS.map((slug) => (
+              <Link
+                key={slug}
+                href={`/admin/${slug}`}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold tracking-wider uppercase transition-all duration-200",
+                  slug === atual ? "text-[#0B0B0B] bg-[#C9A84C]" : "text-neutral-400 hover:text-neutral-200"
+                )}
+              >
+                {PRIMEIRO_NOME[slug] ?? slug}
+              </Link>
+            ))
+          : (
+              <span className="px-3 py-1.5 text-xs font-semibold tracking-wider uppercase text-[#0B0B0B] bg-[#C9A84C]">
+                {PRIMEIRO_NOME[atual] ?? atual}
+              </span>
+            )
+        }
       </div>
       <div className="flex items-center gap-6">
         <button
-          onClick={() => {
-            try { sessionStorage.removeItem("inspire_admin_session"); } catch {}
-            router.push("/admin");
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-2 text-xs font-semibold tracking-wider text-neutral-400 hover:text-amber-500 transition-colors cursor-pointer"
         >
           Sair

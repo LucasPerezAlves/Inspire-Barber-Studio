@@ -108,10 +108,10 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="flex flex-row sm:flex-col items-center gap-4 sm:gap-3 p-4 border border-[#1A1A1A] bg-[#111111] animate-pulse"
+              className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0 p-4 sm:p-0 border border-[#1A1A1A] bg-[#111111] overflow-hidden animate-pulse"
             >
-              <div className="w-20 h-20 sm:w-full sm:aspect-square bg-[#1A1A1A] shrink-0" />
-              <div className="flex-1 space-y-2">
+              <div className="w-20 h-20 sm:w-full sm:h-52 bg-[#1A1A1A] shrink-0" />
+              <div className="flex-1 sm:flex-none sm:w-full sm:px-4 sm:py-3 space-y-2">
                 <div className="h-3 bg-[#1A1A1A] rounded w-3/4" />
                 <div className="h-2 bg-[#1A1A1A] rounded w-1/2" />
               </div>
@@ -232,27 +232,31 @@ function BarberCard({
       transition={{ duration: 0.35, delay, ease: "easeOut" }}
       onClick={() => onSelecionar(profissional.id)}
       className={cn(
-        "group flex flex-row sm:flex-col items-center gap-4 sm:gap-3",
-        "p-4 w-full text-left sm:text-center",
-        "border transition-all duration-300",
-        "active:scale-[0.97]",
+        "group w-full overflow-hidden",
+        // Mobile: linha com padding geral
+        "flex flex-row items-center gap-4 p-4",
+        // Desktop: coluna, sem padding externo — foto vai de borda a borda
+        "sm:flex-col sm:gap-0 sm:p-0 sm:text-center",
+        "border transition-all duration-300 active:scale-[0.97]",
         selecionado
           ? "border-[#C9A84C] bg-[#C9A84C08] shadow-[0_0_20px_0_#C9A84C20]"
           : "border-[#1E1E1E] bg-[#111111] hover:border-[#C9A84C40] hover:bg-[#141414]"
       )}
     >
-      {/* Foto / ícone ──────────────────────────────────────────────
-          Mobile  : w-20 h-20 (80×80 px fixo — suficiente para fill)
-          Desktop : aspect-square sem h-auto — com fill, h-auto colapsa
-                    o pai para 0 pois filhos absolutos saem do fluxo.
-                    aspect-ratio sozinho calcula a altura a partir da largura.
-      ─────────────────────────────────────────────────────────────── */}
+      {/* Foto / ícone ─────────────────────────────────────────────
+          Mobile  : 80×80 px fixo, com ring de seleção
+          Desktop : largura total, altura fixa sm:h-52 (208 px) em
+                    TODOS os cards — garante linhas uniformes no grid
+                    independente de quantas linhas de texto há abaixo.
+      ──────────────────────────────────────────────────────────── */}
       <div
         className={cn(
           "relative shrink-0 overflow-hidden",
-          "w-20 h-20 sm:w-full sm:aspect-square",
-          "transition-all duration-300",
-          selecionado && "ring-2 ring-[#C9A84C] ring-offset-2 ring-offset-[#0B0B0B]"
+          "w-20 h-20",
+          // ring de seleção apenas no mobile (desktop usa a borda do card)
+          selecionado && "ring-2 ring-[#C9A84C] ring-offset-2 ring-offset-[#0B0B0B] sm:ring-0 sm:ring-offset-0",
+          // desktop: largura 100%, altura fixa
+          "sm:w-full sm:h-52",
         )}
       >
         {mostraFoto ? (
@@ -261,15 +265,15 @@ function BarberCard({
             alt={profissional.nome}
             fill
             sizes="(max-width: 640px) 80px, 300px"
-            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+            className="object-cover object-[50%_20%] transition-transform duration-500 group-hover:scale-105"
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] border border-[#2A2A2A] flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] flex items-center justify-center">
             <UserRound
               className={cn(
-                "w-1/2 h-1/2 transition-colors duration-300",
-                selecionado ? "text-[#C9A84C]" : "text-[#3A3A3A] group-hover:text-[#6B6760]"
+                "w-1/3 h-1/3 transition-colors duration-300",
+                selecionado ? "text-[#C9A84C]" : "text-[#2A2A2A] group-hover:text-[#4A4A4A]"
               )}
               strokeWidth={1}
             />
@@ -280,13 +284,13 @@ function BarberCard({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-[#C9A84C10]"
+            className="absolute inset-0 bg-[#C9A84C08]"
           />
         )}
       </div>
 
-      {/* Texto */}
-      <div className="flex-1 sm:w-full sm:flex-none">
+      {/* Texto — padding próprio no desktop */}
+      <div className="flex-1 sm:flex-none sm:w-full sm:px-4 sm:py-3">
         <p
           className={cn(
             "text-sm font-semibold leading-tight transition-colors duration-300",
@@ -295,7 +299,7 @@ function BarberCard({
         >
           {profissional.nome}
         </p>
-        <p className="text-[11px] text-[#6B6760] mt-1 leading-tight">
+        <p className="text-[11px] text-[#6B6760] mt-0.5 leading-tight">
           {profissional.especialidade}
         </p>
       </div>
