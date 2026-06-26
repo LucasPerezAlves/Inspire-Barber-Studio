@@ -1,7 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+
+/* Viewport: viewportFit=cover ativa env(safe-area-inset-*) para notch/home indicator */
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor:  "#0B0B0B",
+};
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +41,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className="bg-[#0B0B0B] text-[#F0EDE8] antialiased">
+      <body className="bg-[#0B0B0B] text-[#F0EDE8] antialiased overflow-x-hidden">
         <Navbar />
         <main className="min-h-screen">{children}</main>
         <Footer />

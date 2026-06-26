@@ -65,15 +65,16 @@ export function EtapaDataHorario({
         <p className="text-[9px] font-mono tracking-[0.3em] uppercase text-[#3A3A3A] mb-3 px-1">
           Dias disponíveis
         </p>
-        <div className="overflow-x-auto scrollbar-none -mx-5 px-5">
+        <div className="overflow-x-auto scrollbar-none -mx-5 px-5 snap-x snap-mandatory scroll-smooth">
           <div className="flex gap-2 pb-2 min-w-max">
             {diasUteis.map((dia) => (
-              <DiaBtn
-                key={dia.toISOString()}
-                dia={dia}
-                selecionado={data?.toDateString() === dia.toDateString()}
-                onSelecionar={handleSelecionarDia}
-              />
+              <div key={dia.toISOString()} className="snap-center">
+                <DiaBtn
+                  dia={dia}
+                  selecionado={data?.toDateString() === dia.toDateString()}
+                  onSelecionar={handleSelecionarDia}
+                />
+              </div>
             ))}
           </div>
         </div>

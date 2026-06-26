@@ -281,7 +281,8 @@ export function AgendamentoFlow() {
             onClick={etapa === 1 ? () => window.history.back() : voltar}
             aria-label="Voltar"
             className={cn(
-              "w-8 h-8 flex items-center justify-center shrink-0",
+              /* w-11 h-11 = 44×44px — zona de toque anatômica para o polegar */
+              "w-11 h-11 flex items-center justify-center shrink-0",
               "border border-[#2A2A2A] text-[#6B6760]",
               "hover:border-[#C9A84C40] hover:text-[#C9A84C]",
               "transition-all duration-200"
