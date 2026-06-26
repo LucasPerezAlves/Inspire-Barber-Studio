@@ -359,7 +359,8 @@ function TeamSwitcher({ atual, isOwner }: { atual: string; isOwner: boolean }) {
                 key={slug}
                 href={`/admin/${slug}`}
                 className={cn(
-                  "px-3 py-1.5 rounded-md font-mono text-[10px] tracking-[0.18em] uppercase transition-all duration-200",
+                  /* min-h-[44px] — zona de toque anatômica (WCAG 2.5.5) */
+                  "min-h-[44px] flex items-center px-3 rounded-md font-mono text-[10px] tracking-[0.18em] uppercase transition-all duration-200",
                   slug === atual
                     ? "bg-[#C9A84C12] text-[#C9A84C] border border-[#C9A84C25]"
                     : "text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#0F0F0F] border border-transparent"
@@ -384,7 +385,7 @@ function TeamSwitcher({ atual, isOwner }: { atual: string; isOwner: boolean }) {
       <motion.button
         onClick={handleLogout}
         whileTap={{ scale: 0.97 }}
-        className="group flex items-center gap-2 px-3 py-1.5 rounded-lg border border-transparent hover:border-[#1A1A1A] transition-all duration-200"
+        className="group min-h-[44px] flex items-center gap-2 px-3 rounded-lg border border-transparent hover:border-[#1A1A1A] transition-all duration-200"
       >
         <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#2A2A2A] group-hover:text-[#6B6760] transition-colors duration-200">
           Sair
@@ -895,7 +896,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                   <motion.button
                     onClick={onClose}
                     whileTap={{ scale: 0.9 }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
+                    className="w-11 h-11 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
                   >
                     <X className="w-4 h-4" strokeWidth={1.5} />
                   </motion.button>
@@ -960,7 +961,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                               disabled={toggleLoadId === prof.id}
                               title={prof.role === "OWNER" ? "Rebaixar para Barber" : "Promover a Owner"}
                               className={cn(
-                                "w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-200",
+                                "w-11 h-11 flex items-center justify-center rounded-lg transition-all duration-200",
                                 prof.role === "OWNER"
                                   ? "text-[#C9A84C] hover:bg-[#C9A84C10]"
                                   : "text-[#2A2A2A] hover:text-[#C9A84C] hover:bg-[#0F0F0F]"
@@ -975,7 +976,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                               whileTap={{ scale: 0.9 }}
                               onClick={() => abrirEdicao(prof)}
                               title="Editar"
-                              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-[#F0EDE8] hover:bg-[#0F0F0F] transition-all duration-200"
+                              className="w-11 h-11 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-[#F0EDE8] hover:bg-[#0F0F0F] transition-all duration-200"
                             >
                               <Pencil className="w-4 h-4" strokeWidth={1.5} />
                             </motion.button>
@@ -983,7 +984,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                               whileTap={{ scale: 0.9 }}
                               onClick={() => setDeletandoId(deletandoId === prof.id ? null : prof.id)}
                               title="Excluir"
-                              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-red-500 hover:bg-red-950/20 transition-all duration-200"
+                              className="w-11 h-11 flex items-center justify-center rounded-lg text-[#2A2A2A] hover:text-red-500 hover:bg-red-950/20 transition-all duration-200"
                             >
                               <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                             </motion.button>
@@ -1066,7 +1067,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                   <motion.button
                     onClick={voltarLista}
                     whileTap={{ scale: 0.9 }}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-[#4A4A4A] hover:text-[#F0EDE8] hover:bg-[#141414] transition-all duration-200"
+                    className="w-11 h-11 flex items-center justify-center rounded-lg text-[#4A4A4A] hover:text-[#F0EDE8] hover:bg-[#141414] transition-all duration-200"
                   >
                     <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                   </motion.button>
@@ -1082,7 +1083,7 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
                 <motion.button
                   onClick={onClose}
                   whileTap={{ scale: 0.9 }}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
+                  className="w-11 h-11 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#F0EDE8] hover:bg-[#1A1A1A] transition-all duration-150"
                 >
                   <X className="w-4 h-4" strokeWidth={1.5} />
                 </motion.button>
@@ -1272,7 +1273,8 @@ function BloqueioModal({
         className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A] border-t border-[#1A1A1A] rounded-t-2xl max-w-2xl mx-auto"
       >
         <div className="w-8 h-1 bg-[#1E1E1E] rounded-full mx-auto mt-4 mb-5" />
-        <div className="px-5 pb-10 space-y-5">
+        {/* pb considera o home indicator do iPhone via env(safe-area-inset-bottom) */}
+        <div className="px-5 pb-[calc(40px+env(safe-area-inset-bottom))] space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -1284,7 +1286,7 @@ function BloqueioModal({
             <motion.button
               onClick={onClose}
               whileTap={{ scale: 0.9 }}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#141414] transition-all duration-150"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-[#3A3A3A] hover:text-[#A8A49E] hover:bg-[#141414] transition-all duration-150"
             >
               <X className="w-4 h-4" strokeWidth={1.5} />
             </motion.button>

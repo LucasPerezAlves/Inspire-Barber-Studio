@@ -206,8 +206,8 @@ export default function AdminLoginPage() {
                   type="button"
                   onClick={() => setMostrarSenha((v) => !v)}
                   className={cn(
-                    "absolute right-4 top-1/2 -translate-y-1/2 z-10",
-                    "w-7 h-7 flex items-center justify-center rounded-lg",
+                    "absolute right-3 top-1/2 -translate-y-1/2 z-10",
+                    "w-10 h-10 flex items-center justify-center rounded-lg",
                     "text-[#2A2A2A] hover:text-[#6B6760] hover:bg-[#1A1A1A]",
                     "transition-all duration-200"
                   )}

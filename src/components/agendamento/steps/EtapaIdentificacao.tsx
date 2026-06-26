@@ -99,7 +99,7 @@ export function EtapaIdentificacao({
 
   /* ── Render ─────────────────────────────────────────────────────── */
   return (
-    <div className="pt-2 pb-16">
+    <div className="pt-2 pb-36">
 
       {/* ── Título dinâmico ──────────────────────────────────────── */}
       <div className="py-5 border-b border-[#1A1A1A] mb-6">

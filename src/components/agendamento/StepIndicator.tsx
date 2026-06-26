@@ -53,7 +53,8 @@ export function StepIndicator({ etapaAtual, onIrPara }: StepIndicatorProps) {
                 onClick={() => concluida && onIrPara(numero)}
                 disabled={numero > etapaAtual}
                 aria-current={ativa ? "step" : undefined}
-                className="flex flex-col items-start gap-0.5 disabled:cursor-not-allowed"
+                /* min-h/w-[44px] = zona de toque mínima WCAG 2.5.5 */
+                className="min-h-[44px] min-w-[44px] flex flex-col items-start justify-center gap-0.5 disabled:cursor-not-allowed"
               >
                 {/* Número */}
                 <span

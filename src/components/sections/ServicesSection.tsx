@@ -110,19 +110,22 @@ export function ServicesSection() {
 
         {/* Dots + link */}
         <div className="mt-10 px-6 lg:px-10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             {CARDS.map((_, i) => (
+              /* min-h/w-[44px]: área de toque anatômica — o visual permanece fino */
               <button
                 key={i}
                 onClick={() => goTo(i)}
                 aria-label={`Ir para card ${i + 1}`}
-                className={cn(
-                  "transition-all duration-400",
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <span className={cn(
+                  "block transition-all duration-400",
                   i === active
                     ? "w-10 h-px bg-[#C9A84C]"
                     : "w-4 h-px bg-[#2A2A2A] hover:bg-[#3A3A3A]"
-                )}
-              />
+                )} />
+              </button>
             ))}
           </div>
 

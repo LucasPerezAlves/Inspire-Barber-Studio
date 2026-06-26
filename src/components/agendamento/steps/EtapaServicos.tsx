@@ -30,7 +30,7 @@ export function EtapaServicos({
   const podeAvancar = selecionados.length > 0;
 
   return (
-    <div className="pb-44 sm:pb-36 pt-2">
+    <div className="pb-[calc(176px+env(safe-area-inset-bottom))] sm:pb-36 pt-2">
       {/* Título */}
       <div className="py-5 border-b border-[#1A1A1A] mb-4">
         <h2 className="font-display text-xl font-semibold text-[#F0EDE8]">
@@ -73,7 +73,7 @@ export function EtapaServicos({
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <div className="absolute inset-0 bg-[#0B0B0B]/90 backdrop-blur-xl border-t border-[#C9A84C15] shadow-[0_-8px_32px_0_#00000070]" />
 
-        <div className="relative max-w-2xl mx-auto px-5 pt-4 pb-6 sm:py-4">
+        <div className="relative max-w-2xl mx-auto px-5 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] sm:py-4">
           {/* Resumo */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
