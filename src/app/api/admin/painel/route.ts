@@ -42,6 +42,17 @@ export async function GET(request: NextRequest) {
 
   /* ── 3. Busca profissional por slug (parameterizado pelo SDK) ── */
   try {
+    /* ── [TEMP-DIAG] Vercel Function Log — remove após confirmar vars ─
+       Nunca expõe valores: apenas true/false de presença.
+       Veja em: Vercel Dashboard → Deployment → Functions → painel       */
+    console.log("[api/painel] env vars presentes:", {
+      NEXT_PUBLIC_SUPABASE_URL:  !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      SUPABASE_URL:              !!process.env.SUPABASE_URL,
+      SERVICE_ROLE_KEY:          !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      JWT_SECRET:                !!process.env.JWT_SECRET,
+    });
+    /* ──────────────────────────────────────────────────────────────── */
+
     const supabase = makeServerClient();
 
     const { data: prof, error: errProf } = await supabase

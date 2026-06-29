@@ -2,14 +2,9 @@
 
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-/* Foto do barbeiro como imagem cinematográfica de fundo — Firebase */
-const HERO_PHOTO =
-  "https://firebasestorage.googleapis.com/v0/b/marcaai-a6efb.appspot.com/o/profileBarber%2FgJImKl5pipbmAT8l7eF0RRAB1Ic2.jpeg?alt=media&token=501a651f-9fa4-4795-9f98-8a972bb4a32e";
 
 const stagger = {
   show: { transition: { staggerChildren: 0.11, delayChildren: 0.15 } },
@@ -22,45 +17,40 @@ const fadeUp = {
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
 
-  /* Parallax suave — imagem sobe mais devagar que o scroll */
+  /* Parallax suave — texto sobe levemente durante o scroll */
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end start"],
   });
-  const bgY   = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
   const textY = useTransform(scrollYProgress, [0, 1], ["0%", "7%"]);
 
   return (
     <section
       ref={sectionRef}
       id="inicio"
-      className="relative min-h-screen overflow-hidden bg-[#0B0B0B]"
+      className="relative min-h-screen overflow-hidden bg-black"
     >
-      {/* ── Imagem de fundo com parallax ─────────────────────────── */}
-      <motion.div style={{ y: bgY }} className="absolute inset-0 scale-[1.18] origin-top">
-        <Image
-          src={HERO_PHOTO}
-          alt="Inspire Barber Studio"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[60%_15%]"
-        />
-        {/* Overlays cinematográficos: escurece laterais e base */}
-        <div className="absolute inset-0 bg-[#0B0B0B]/60" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B0B0B]/96 via-[#0B0B0B]/55 to-[#0B0B0B]/15" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0B] via-transparent to-[#0B0B0B]/35" />
-      </motion.div>
-
-      {/* ── Grain cinematográfico ─────────────────────────────────── */}
+      {/* ── Profundidade: glow radial âmbar extremamente sutil ────────
+          Confere dimensionalidade ao fundo preto sem competir com o texto.
+          Fica ancorado à esquerda, onde a tipografia vive.
+      ─────────────────────────────────────────────────────────────── */}
       <div
-        className="absolute inset-0 opacity-[0.038] pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 60% at 15% 50%, rgba(201,168,76,0.05) 0%, transparent 65%)",
+        }}
+      />
+
+      {/* ── Grain cinematográfico — textura discreta sobre preto puro ─ */}
+      <div
+        className="absolute inset-0 opacity-[0.045] pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
       />
 
-      {/* ── Conteúdo — desalinhado à esquerda (assimétrico) ─────── */}
+      {/* ── Conteúdo — assimétrico à esquerda ─────────────────────── */}
       <motion.div
         style={{ y: textY }}
         className="relative z-10 min-h-screen flex flex-col justify-center px-6 sm:px-10 lg:px-[8vw] pt-28 pb-24"
@@ -111,7 +101,7 @@ export function HeroSection() {
             uma experiência que vai além do óbvio.
           </motion.p>
 
-          {/* CTA — botão com preenchimento fluido (bottom-up fill) */}
+          {/* CTA — preenchimento fluido de baixo para cima */}
           <motion.div variants={fadeUp}>
             <Link
               href="/agendar"
@@ -121,7 +111,6 @@ export function HeroSection() {
                 "border border-[#C9A84C]"
               )}
             >
-              {/* Fill surge de baixo para cima */}
               <span
                 className={cn(
                   "absolute inset-0 bg-[#C9A84C]",
