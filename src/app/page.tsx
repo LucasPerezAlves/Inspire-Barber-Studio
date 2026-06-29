@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
+/* force-dynamic garante que a Vercel não sirva uma versão SSG cacheada
+   da Landing Page. Sem isso o CDN pode entregar um snapshot sem os
+   headers corretos para o fetch de sessão do Navbar funcionar.       */
+export const dynamic = "force-dynamic";
 import { HeroSection }    from "@/components/sections/HeroSection";
 import { ServicesSection } from "@/components/sections/ServicesSection";
 import { BrandTicker }    from "@/components/sections/BrandTicker";

@@ -4,6 +4,7 @@ export const COOKIE_NAME    = "inspire_admin_token";
 export const COOKIE_MAX_AGE = 4 * 60 * 60; // 4 h em segundos
 
 export interface AdminTokenPayload extends JWTPayload {
+  nome?: string;   // opcional: ausente em tokens gerados antes desta versão
   slug: string;
   role: "OWNER" | "BARBER";
 }
@@ -21,9 +22,10 @@ function getSecret(): Uint8Array {
 export async function signAdminToken(
   sub: string,
   slug: string,
-  role: "OWNER" | "BARBER"
+  role: "OWNER" | "BARBER",
+  nome: string
 ): Promise<string> {
-  return new SignJWT({ slug, role })
+  return new SignJWT({ slug, role, nome })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(sub)
     .setIssuedAt()

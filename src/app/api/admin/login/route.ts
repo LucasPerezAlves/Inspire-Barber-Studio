@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     /* ── Gera JWT e seta cookie HttpOnly ─────────────────────────── */
-    const token = await signAdminToken(data.id, data.slug, data.role);
+    const token = await signAdminToken(data.id, data.slug, data.role, data.nome);
 
     const response = NextResponse.json({ ok: true, slug: data.slug });
     response.cookies.set(COOKIE_NAME, token, cookieOptions(COOKIE_MAX_AGE));

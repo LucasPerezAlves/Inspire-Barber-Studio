@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSession, logoutCliente } from "@/components/auth/auth-screen";
 
 const stagger = {
   show: { transition: { staggerChildren: 0.11, delayChildren: 0.15 } },
@@ -16,6 +17,20 @@ const fadeUp = {
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
+
+  /* Sessão do cliente (localStorage) — independente do sistema admin */
+  const [customerSession, setCustomerSession] = useState<{ nome: string; whatsapp: string } | null>(null);
+
+  useEffect(() => {
+    setCustomerSession(getSession());
+  }, []);
+
+  const handleLogoutCustomer = useCallback(async () => {
+    await logoutCliente();
+    setCustomerSession(null);
+  }, []);
+
+  const primeiroNome = customerSession?.nome.split(" ")[0] ?? "";
 
   /* Parallax suave — texto sobe levemente durante o scroll */
   const { scrollYProgress } = useScroll({
@@ -101,31 +116,94 @@ export function HeroSection() {
             uma experiência que vai além do óbvio.
           </motion.p>
 
-          {/* CTA — preenchimento fluido de baixo para cima */}
+          {/* CTA — condicional: visitante → agendamento / cliente logado → perfil */}
           <motion.div variants={fadeUp}>
-            <Link
-              href="/agendar"
-              className={cn(
-                "group relative inline-flex items-center gap-3 overflow-hidden",
-                "px-9 py-[1.05rem] text-sm font-semibold tracking-[0.2em] uppercase",
-                "border border-[#C9A84C]"
+            <AnimatePresence mode="wait" initial={false}>
+              {customerSession ? (
+                /* ── Cliente autenticado ─────────────────────────────── */
+                <motion.div
+                  key="cliente"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex flex-col gap-3"
+                >
+                  {/* Saudação personalizada */}
+                  <p className="font-mono text-[10px] tracking-[0.42em] uppercase text-[#C9A84C70]">
+                    Olá, {primeiroNome}
+                  </p>
+
+                  {/* CTA principal */}
+                  <Link
+                    href="/perfil"
+                    className={cn(
+                      "group relative inline-flex items-center gap-3 overflow-hidden",
+                      "px-9 py-[1.05rem] text-sm font-semibold tracking-[0.2em] uppercase",
+                      "border border-[#C9A84C]"
+                    )}
+                  >
+                    <span className={cn(
+                      "absolute inset-0 bg-[#C9A84C]",
+                      "translate-y-full group-hover:translate-y-0",
+                      "transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                    )} />
+                    <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300 delay-[0ms] group-hover:delay-[50ms]">
+                      Ver Meus Agendamentos
+                    </span>
+                    <ArrowRight
+                      className="relative z-10 w-4 h-4 text-[#C9A84C] group-hover:text-[#0B0B0B] group-hover:translate-x-1 transition-all duration-300"
+                      strokeWidth={2}
+                    />
+                  </Link>
+
+                  {/* Sair discreto */}
+                  <button
+                    type="button"
+                    onClick={handleLogoutCustomer}
+                    className={cn(
+                      "self-start flex items-center gap-1.5",
+                      "font-mono text-[10px] tracking-[0.3em] uppercase",
+                      "text-[#3A3A3A] hover:text-red-400 transition-colors duration-200"
+                    )}
+                  >
+                    <LogOut className="w-3 h-3" strokeWidth={1.5} />
+                    Sair da conta
+                  </button>
+                </motion.div>
+              ) : (
+                /* ── Visitante ───────────────────────────────────────── */
+                <motion.div
+                  key="visitante"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <Link
+                    href="/agendar"
+                    className={cn(
+                      "group relative inline-flex items-center gap-3 overflow-hidden",
+                      "px-9 py-[1.05rem] text-sm font-semibold tracking-[0.2em] uppercase",
+                      "border border-[#C9A84C]"
+                    )}
+                  >
+                    <span className={cn(
+                      "absolute inset-0 bg-[#C9A84C]",
+                      "translate-y-full group-hover:translate-y-0",
+                      "transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                    )} />
+                    <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300 delay-[0ms] group-hover:delay-[50ms]">
+                      Agendar Horário
+                    </span>
+                    <ArrowRight
+                      className="relative z-10 w-4 h-4 text-[#C9A84C] group-hover:text-[#0B0B0B] group-hover:translate-x-1 transition-all duration-300"
+                      strokeWidth={2}
+                    />
+                  </Link>
+                </motion.div>
               )}
-            >
-              <span
-                className={cn(
-                  "absolute inset-0 bg-[#C9A84C]",
-                  "translate-y-full group-hover:translate-y-0",
-                  "transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                )}
-              />
-              <span className="relative z-10 text-[#C9A84C] group-hover:text-[#0B0B0B] transition-colors duration-300 delay-[0ms] group-hover:delay-[50ms]">
-                Agendar Horário
-              </span>
-              <ArrowRight
-                className="relative z-10 w-4 h-4 text-[#C9A84C] group-hover:text-[#0B0B0B] group-hover:translate-x-1 transition-all duration-300"
-                strokeWidth={2}
-              />
-            </Link>
+            </AnimatePresence>
           </motion.div>
         </motion.div>
 

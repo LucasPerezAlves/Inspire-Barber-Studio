@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import { BARBEARIA, SERVICOS, PROFISSIONAIS, formatarPreco } from "@/data/agendamento-dados";
+import { BARBEARIA, SERVICOS, PROFISSIONAIS, formatarPreco, type Profissional } from "@/data/agendamento-dados";
 import { sanitizeText, sanitizePhone } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
 import { StepIndicator } from "./StepIndicator";
@@ -48,6 +48,18 @@ export function AgendamentoFlow() {
   const [direcao, setDirecao] = useState(1);
   const [confirmado, setConfirmado] = useState(false);
 
+  /* Badge de fidelidade exibido na tela de sucesso quando o cliente
+     está logado e o servidor confirma o registro do corte.          */
+  const [fidelidadeBadge, setFidelidadeBadge] = useState<{
+    cortes:  number;
+    ganhou:  boolean;
+  } | null>(null);
+
+  /* Lista real de profissionais elevada do EtapaProfissional após o
+     fetch do Supabase. Inicializada com a lista estática como fallback
+     para garantir que "qualquer" sempre resolva corretamente.          */
+  const [profissionaisLista, setProfissionaisLista] = useState<Profissional[]>(PROFISSIONAIS);
+
   const [state, setState] = useState<AgendamentoState>({
     servicosSelecionados: [],
     profissionalId: "qualquer",
@@ -89,6 +101,12 @@ export function AgendamentoFlow() {
   };
 
   const selecionarProfissional = (id: string) => {
+    /* Validação estrita: rejeita qualquer ID que não pertença à lista
+       carregada do Supabase. Previne manipulação via devtools ou fuzzing
+       antes que o valor chegue ao estado e à mensagem do WhatsApp.      */
+    const idConhecido = profissionaisLista.some((p) => p.id === id);
+    if (!idConhecido) return;
+
     setState((prev) => ({ ...prev, profissionalId: id }));
     setTimeout(() => avancar(), 280);
   };
@@ -108,7 +126,40 @@ export function AgendamentoFlow() {
     setState((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  const confirmar = () => setConfirmado(true);
+  const confirmar = () => {
+    /* Atualiza a UI imediatamente — não bloqueia no await */
+    setConfirmado(true);
+
+    /* Dispara o registro de histórico + incremento de fidelidade
+       em background. Se o cliente não estiver logado (sem cookie JWT),
+       a API retorna 401 silenciosamente — o fluxo continua normalmente.
+       O cliente_id NUNCA é enviado pelo frontend; o servidor o extrai
+       do JWT para prevenir IDOR/Parameter Tampering.                   */
+    if (state.data && state.horario && servicosObj.length > 0) {
+      fetch("/api/cliente/historico", {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify({
+          profissional_nome: profissional?.nome ?? "Qualquer",
+          servicos:          servicosObj.map((s) => s.nome),
+          valor:             totalPreco,
+          data:              state.data.toISOString().slice(0, 10),
+          horario:           state.horario,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { ok?: boolean; cortes_fidelidade?: number; ganhou_recompensa?: boolean } | null) => {
+          if (data?.ok) {
+            setFidelidadeBadge({
+              cortes: data.cortes_fidelidade ?? 0,
+              ganhou: data.ganhou_recompensa ?? false,
+            });
+          }
+        })
+        .catch(() => { /* não-fatal */ });
+    }
+  };
 
   /* ─── Resumo calculado ──────────────────────────────────────── */
   const servicosObj = SERVICOS.filter((s) =>
@@ -116,7 +167,12 @@ export function AgendamentoFlow() {
   );
   const totalPreco   = servicosObj.reduce((acc, s) => acc + s.preco, 0);
   const totalDuracao = servicosObj.reduce((acc, s) => acc + s.duracao, 0);
-  const profissional = PROFISSIONAIS.find((p) => p.id === state.profissionalId);
+
+  /* Lookup na lista REAL do Supabase (elevada via onListaCarregada),
+     nunca na lista estática — corrige o bug do nome fixo no resumo.
+     Fallback para PROFISSIONAIS[0] ("Qualquer") se o ID não existir. */
+  const profissional = profissionaisLista.find((p) => p.id === state.profissionalId)
+                    ?? PROFISSIONAIS[0];
 
   /* ─── Tela de confirmação — "wow" effect ────────────────────────── */
   if (confirmado) {
@@ -238,6 +294,35 @@ export function AgendamentoFlow() {
           </motion.div>
         </motion.div>
 
+        {/* Badge de fidelidade — aparece apenas quando o cliente está logado */}
+        <AnimatePresence>
+          {fidelidadeBadge && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0,  scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-sm flex items-center gap-3 px-4 py-3.5 mb-4 bg-[#C9A84C0D] border border-[#C9A84C30] rounded-xl"
+            >
+              <span className="text-xl shrink-0" aria-hidden>💈</span>
+              <div>
+                {fidelidadeBadge.ganhou ? (
+                  <p className="text-xs font-semibold text-[#C9A84C] leading-snug">
+                    🎉 Parabéns! Você completou 10 cortes — seu próximo é grátis!
+                  </p>
+                ) : (
+                  <p className="text-xs font-semibold text-[#C9A84C] leading-snug">
+                    Carimbo registrado!{" "}
+                    <span className="text-[#E6C97A]">
+                      {fidelidadeBadge.cortes}/10
+                    </span>{" "}
+                    no seu cartão fidelidade.
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* CTA WhatsApp com fluid fill */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -351,6 +436,7 @@ export function AgendamentoFlow() {
               <EtapaProfissional
                 profissionalId={state.profissionalId}
                 onSelecionar={selecionarProfissional}
+                onListaCarregada={setProfissionaisLista}
               />
             )}
             {etapa === 3 && (
@@ -370,7 +456,7 @@ export function AgendamentoFlow() {
                 onWhatsappChange={(v) => atualizarCampo("whatsapp", v)}
                 onConfirmar={confirmar}
                 servicosObj={servicosObj}
-                profissional={profissional ?? PROFISSIONAIS[0]}
+                profissional={profissional}
                 data={state.data}
                 horario={state.horario}
                 totalPreco={totalPreco}
