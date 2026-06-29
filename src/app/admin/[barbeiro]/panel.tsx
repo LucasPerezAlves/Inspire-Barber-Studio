@@ -12,10 +12,10 @@ import {
   Eye, EyeOff, ImageIcon, Upload, Pencil, Trash2, ShieldCheck, ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase, type AgendamentoDB } from "@/lib/supabase";
+import { getSupabaseClient, type AgendamentoDB } from "@/lib/supabase";
 import { mascaraTelefone } from "@/data/agendamento-dados";
 
-/* ── Types ──────────────────────────────────────────────────────── */
+/* Types */
 type Status = "confirmado" | "concluido" | "bloqueado";
 
 interface Agendamento {
@@ -739,11 +739,11 @@ function ModalEquipe({ onClose }: { onClose: () => void }) {
       if (arquivo) {
         const ext      = arquivo.name.split(".").pop();
         const filename = `${Date.now()}-${form.slug.toLowerCase()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage
+        const { error: uploadErr } = await getSupabaseClient().storage
           .from("barbeiros-fotos")
           .upload(filename, arquivo, { upsert: true, contentType: arquivo.type });
         if (uploadErr) { setErro(`Erro no upload: ${uploadErr.message}`); return; }
-        const { data: urlData } = supabase.storage.from("barbeiros-fotos").getPublicUrl(filename);
+        const { data: urlData } = getSupabaseClient().storage.from("barbeiros-fotos").getPublicUrl(filename);
         fotoUrl = urlData.publicUrl;
       }
 

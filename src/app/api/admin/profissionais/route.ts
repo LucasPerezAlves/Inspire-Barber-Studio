@@ -10,6 +10,10 @@ import { verifyAdminToken, COOKIE_NAME } from "@/lib/auth";
 import { sanitizeText, sanitizeEmail, sanitizeSlug, sanitizePhone } from "@/lib/sanitize";
 import { makeServerClient } from "@/lib/supabase-server";
 
+/* Força execução dinâmica — autenticação via cookie e escrita no banco
+   não podem ser cacheadas estaticamente em nenhuma circunstância.    */
+export const dynamic = "force-dynamic";
+
 async function requireOwner(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;

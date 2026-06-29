@@ -13,6 +13,10 @@ import { verifyAdminToken, COOKIE_NAME } from "@/lib/auth";
 import { sanitizeSlug } from "@/lib/sanitize";
 import { makeServerClient } from "@/lib/supabase-server";
 
+/* Força execução dinâmica — esta rota lê cookies de sessão e consulta
+   o banco a cada request; nunca deve ser cacheada estaticamente.     */
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   /* ── 1. Autenticação — verifica JWT do cookie ────────────────── */
   const token = request.cookies.get(COOKIE_NAME)?.value;
