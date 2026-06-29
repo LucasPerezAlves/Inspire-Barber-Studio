@@ -5,18 +5,21 @@ import Image from "next/image";
 import { UserRound, Loader2, WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { supabase, supabaseConfigurado } from "@/lib/supabase";
+import { getSupabaseClient, supabaseConfigurado } from "@/lib/supabase";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/barbeiros-fotos`;
+/* STORAGE_BASE é computado dentro de getFotoSrc() para garantir
+   que process.env seja lido em runtime, não em module-load time. */
 
 function getFotoSrc(foto: string | null): string | null {
-  if (!foto || !SUPABASE_URL) return null;
+  /* Lê a env var em tempo de chamada — seguro no Vercel Runtime */
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (!foto || !supabaseUrl) return null;
   if (foto.startsWith("https://") || foto.startsWith("http://")) return foto;
   if (foto.startsWith("barbeiros-fotos/")) {
-    return `${SUPABASE_URL}/storage/v1/object/public/${foto}`;
+    return `${supabaseUrl}/storage/v1/object/public/${foto}`;
   }
-  return `${STORAGE_BASE}/${foto}`;
+  const storageBase = `${supabaseUrl}/storage/v1/object/public/barbeiros-fotos`;
+  return `${storageBase}/${foto}`;
 }
 
 interface Profissional {
@@ -56,7 +59,7 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from("profissionais")
         .select("slug, nome, especialidade, foto_url")
         .order("nome", { ascending: true });

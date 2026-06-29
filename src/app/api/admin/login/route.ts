@@ -3,6 +3,10 @@ import { signAdminToken, COOKIE_NAME, COOKIE_MAX_AGE, cookieOptions } from "@/li
 import { sanitizeEmail, sanitizeText } from "@/lib/sanitize";
 import { makeServerClient } from "@/lib/supabase-server";
 
+/* Força execução dinâmica em cada request — impede que o Next.js
+   tente cachear ou pré-renderizar esta rota de autenticação.       */
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
