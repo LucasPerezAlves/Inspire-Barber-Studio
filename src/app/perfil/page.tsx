@@ -13,25 +13,26 @@ import { cn } from "@/lib/utils";
 import { clearSession, getSession } from "@/components/auth/auth-screen";
 
 /* ── Tipos ──────────────────────────────────────────────────────── */
-interface Session {
-  nome: string;
-  whatsapp: string;
+interface PerfilData {
+  nome:              string;
+  whatsapp:          string;
+  cortes_fidelidade: number;
+  proximo_gratis:    boolean;
+  historico:         HistoricoItem[];
 }
 
-/* ── Mock: histórico de cortes ──────────────────────────────────── */
-const HISTORICO_MOCK = [
-  {
-    id: "h1",
-    descricao: "Combo: Cabelo + Barba na Navalha",
-    servicoIds: ["combo-cab-barb-m"],
-    data: "12/05/2026",
-    profissional: "Pablo de Oliveira",
-    preco: 70,
-  },
-] as const;
+interface HistoricoItem {
+  id:               string;
+  profissional_nome: string | null;
+  servicos:         string[];
+  valor:            number;
+  data_agendamento: string;
+  horario:          string;
+  criado_em:        string;
+}
 
-/* ── Fidelidade: dados mockados ─────────────────────────────────── */
-const FIDELIDADE = { preenchidos: 4, total: 10, premio: "Barba na Navalha" } as const;
+const FIDELIDADE_TOTAL = 10;
+const PREMIO_NOME      = "Barba na Navalha";
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 function formatPhone(d: string) {
@@ -49,35 +50,60 @@ function getInitials(nome: string) {
 ══════════════════════════════════════════════════════════════════ */
 export default function PerfilPage() {
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [ready, setReady] = useState(false);
+  const [perfil, setPerfil]   = useState<PerfilData | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  /*
+   * Fonte de verdade: /api/cliente/perfil valida o JWT HttpOnly e
+   * retorna dados frescos do Supabase. O middleware já redireciona para
+   * /auth se não houver cookie, mas este fallback garante resiliência
+   * em caso de race condition entre middleware e fetch.
+   */
   useEffect(() => {
-    const s = getSession();
-    if (!s) { router.replace("/auth"); return; }
-    setSession(s);
-    setReady(true);
+    fetch("/api/cliente/perfil", { credentials: "include", cache: "no-store" })
+      .then((r) => {
+        if (r.status === 401 || r.status === 404) {
+          router.replace("/auth");
+          return null;
+        }
+        return r.json() as Promise<PerfilData>;
+      })
+      .then((data) => {
+        if (!data) return;
+        setPerfil(data);
+        /* Sincroniza o cache localStorage para Navbar/HeroSection */
+        try {
+          const { saveSession } = require("@/components/auth/auth-screen");
+          saveSession({ nome: data.nome, whatsapp: data.whatsapp });
+        } catch {}
+      })
+      .catch(() => router.replace("/auth"))
+      .finally(() => setLoading(false));
   }, [router]);
 
-  const handleLogout = () => { clearSession(); router.push("/auth"); };
+  const handleLogout = async () => {
+    try { await fetch("/api/cliente/logout", { method: "POST" }); } catch {}
+    clearSession();
+    router.push("/auth");
+  };
 
-  /* Função de reagendamento rápido: grava no sessionStorage e navega */
-  const handleRepetir = (ids: readonly string[]) => {
-    sessionStorage.setItem("inspire_repeat_servicos", JSON.stringify([...ids]));
+  /* Reagendamento rápido: pré-seleciona serviços pelo nome */
+  const handleRepetir = (servicos: string[]) => {
+    sessionStorage.setItem("inspire_repeat_servicos_nome", JSON.stringify(servicos));
     router.push("/agendar");
   };
 
-  if (!ready) {
+  if (loading) {
     return (
       <div className="min-h-[calc(100vh-80px)] bg-[#0B0B0B] flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
-  if (!session) return null;
+  if (!perfil) return null;
 
-  const initials  = getInitials(session.nome);
-  const firstName = session.nome.split(/\s+/)[0];
+  const initials  = getInitials(perfil.nome);
+  const firstName = perfil.nome.split(/\s+/)[0];
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[#0B0B0B] px-4 py-12">
@@ -108,7 +134,7 @@ export default function PerfilPage() {
               </div>
               <div className="min-w-0">
                 <p className="font-display text-lg font-semibold text-[#F0EDE8] leading-tight truncate">
-                  {session.nome}
+                  {perfil.nome}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Star className="w-3 h-3 text-[#C9A84C] fill-[#C9A84C]" />
@@ -122,21 +148,26 @@ export default function PerfilPage() {
             <div className="space-y-px border border-[#1A1A1A]">
               <InfoRow
                 icon={<User className="w-4 h-4 text-[#C9A84C]" strokeWidth={1.5} />}
-                label="Nome" value={session.nome}
+                label="Nome" value={perfil.nome}
               />
               <InfoRow
                 icon={<Phone className="w-4 h-4 text-[#C9A84C]" strokeWidth={1.5} />}
-                label="WhatsApp" value={formatPhone(session.whatsapp)}
+                label="WhatsApp" value={formatPhone(perfil.whatsapp)}
               />
             </div>
           </div>
         </div>
 
         {/* ── [1] Cartão Fidelidade ────────────────────────────── */}
-        <CartaoFidelidade />
+        <CartaoFidelidade
+          preenchidos={perfil.cortes_fidelidade}
+          total={FIDELIDADE_TOTAL}
+          premio={PREMIO_NOME}
+          proximoGratis={perfil.proximo_gratis}
+        />
 
         {/* ── [2] Preferências de Estilo ──────────────────────── */}
-        <PreferenciasEstilo userId={session.whatsapp} />
+        <PreferenciasEstilo userId={perfil.whatsapp} />
 
         {/* ── Próximos agendamentos (placeholder) ─────────────── */}
         <div className="bg-[#121212] border border-[#1E1E1E] p-5">
@@ -154,7 +185,10 @@ export default function PerfilPage() {
         </div>
 
         {/* ── [3] Cortes Anteriores ────────────────────────────── */}
-        <CortesAnteriores onRepetir={handleRepetir} />
+        <CortesAnteriores
+          historico={perfil.historico}
+          onRepetir={handleRepetir}
+        />
 
         {/* ── CTAs principais ──────────────────────────────────── */}
         <Link
@@ -201,10 +235,19 @@ export default function PerfilPage() {
 /* ══════════════════════════════════════════════════════════════════
    [1] Cartão Fidelidade
 ══════════════════════════════════════════════════════════════════ */
-function CartaoFidelidade() {
-  const { preenchidos, total, premio } = FIDELIDADE;
+function CartaoFidelidade({
+  preenchidos,
+  total,
+  premio,
+  proximoGratis,
+}: {
+  preenchidos:  number;
+  total:        number;
+  premio:       string;
+  proximoGratis: boolean;
+}) {
   const faltam = total - preenchidos;
-  const pct    = (preenchidos / total) * 100;
+  const pct    = Math.min((preenchidos / total) * 100, 100);
 
   /* Anima a barra de progresso após montar */
   const [mounted, setMounted] = useState(false);
@@ -281,15 +324,24 @@ function CartaoFidelidade() {
           </span>
         </div>
 
-        {/* Texto motivacional */}
-        <div className="flex items-center gap-2 mt-3">
-          <Gift className="w-3.5 h-3.5 text-[#C9A84C40] shrink-0" strokeWidth={1.5} />
-          <p className="text-[10px] text-[#3A3A3A]">
-            {faltam === 1
-              ? `Falta apenas 1 corte para o seu prêmio!`
-              : `Faltam ${faltam} cortes para o seu prêmio`}
-          </p>
-        </div>
+        {/* Texto motivacional / banner de prêmio */}
+        {proximoGratis ? (
+          <div className="flex items-center gap-2 mt-3 px-3 py-2.5 bg-[#C9A84C12] border border-[#C9A84C40] rounded-lg">
+            <Gift className="w-3.5 h-3.5 text-[#C9A84C] shrink-0" strokeWidth={1.5} />
+            <p className="text-[11px] text-[#C9A84C] font-semibold">
+              🎉 Seu próximo corte é grátis! Apresente ao barbeiro.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mt-3">
+            <Gift className="w-3.5 h-3.5 text-[#C9A84C40] shrink-0" strokeWidth={1.5} />
+            <p className="text-[10px] text-[#3A3A3A]">
+              {faltam === 1
+                ? `Falta apenas 1 corte para o seu prêmio!`
+                : `Faltam ${faltam} cortes para o seu prêmio`}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -593,12 +645,14 @@ function PreferenciasEstilo({ userId }: { userId: string }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   [3] Cortes Anteriores — Histórico + Reagendamento Rápido
+   [3] Cortes Anteriores — Histórico real do banco + Reagendamento
 ══════════════════════════════════════════════════════════════════ */
 function CortesAnteriores({
+  historico,
   onRepetir,
 }: {
-  onRepetir: (ids: readonly string[]) => void;
+  historico: HistoricoItem[];
+  onRepetir: (servicos: string[]) => void;
 }) {
   return (
     <div className="bg-[#121212] border border-[#1E1E1E] overflow-hidden">
@@ -609,52 +663,79 @@ function CortesAnteriores({
         <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-[#6B6760]">
           Cortes Anteriores
         </span>
+        {historico.length > 0 && (
+          <span className="ml-auto text-[10px] text-[#3A3A3A]">
+            {historico.length} registro{historico.length > 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
       {/* Lista */}
-      <div className="divide-y divide-[#121212]">
-        {HISTORICO_MOCK.map((h) => (
-          <div key={h.id} className="bg-[#0D0D0D] px-5 py-4">
+      {historico.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center px-5">
+          <Scissors className="w-8 h-8 text-[#2A2A2A]" strokeWidth={1} />
+          <p className="text-[#6B6760] text-sm">Nenhum corte registrado ainda</p>
+          <p className="text-[10px] text-[#3A3A3A]">
+            Seus cortes aparecerão aqui após o agendamento
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-[#121212]">
+          {historico.map((h) => {
+            const dataFormatada = new Date(h.data_agendamento + "T12:00:00")
+              .toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+            const descricao = h.servicos.join(", ") || "Corte";
 
-            {/* Info do corte */}
-            <div className="flex items-start gap-3 mb-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#F0EDE8] leading-snug">
-                  {h.descricao}
-                </p>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
-                  <span className="text-[11px] text-[#6B6760]">
-                    {h.profissional}
-                  </span>
-                  <span className="text-[#252525]">·</span>
-                  <span className="text-[11px] text-[#6B6760]">
-                    Realizado em {h.data}
+            return (
+              <div key={h.id} className="bg-[#0D0D0D] px-5 py-4">
+
+                {/* Info do corte */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#F0EDE8] leading-snug">
+                      {descricao}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
+                      {h.profissional_nome && (
+                        <>
+                          <span className="text-[11px] text-[#6B6760]">
+                            {h.profissional_nome}
+                          </span>
+                          <span className="text-[#252525]">·</span>
+                        </>
+                      )}
+                      <span className="text-[11px] text-[#6B6760]">
+                        {dataFormatada} às {h.horario}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-display text-lg font-semibold text-[#C9A84C]">
+                    R$ {Number(h.valor).toFixed(0)}
                   </span>
                 </div>
-              </div>
-              <span className="shrink-0 font-display text-lg font-semibold text-[#C9A84C]">
-                R$ {h.preco}
-              </span>
-            </div>
 
-            {/* Botão de repetição */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => onRepetir(h.servicoIds)}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 py-3",
-                "text-xs font-semibold tracking-[0.15em] uppercase",
-                "text-[#C9A84C] border border-[#C9A84C30]",
-                "hover:border-[#C9A84C70] hover:bg-[#C9A84C08]",
-                "transition-all duration-200"
-              )}
-            >
-              <RotateCcw className="w-3.5 h-3.5" strokeWidth={2} />
-              Repetir este corte
-            </motion.button>
-          </div>
-        ))}
-      </div>
+                {/* Botão de repetição */}
+                {h.servicos.length > 0 && (
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => onRepetir(h.servicos)}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 py-3",
+                      "text-xs font-semibold tracking-[0.15em] uppercase",
+                      "text-[#C9A84C] border border-[#C9A84C30]",
+                      "hover:border-[#C9A84C70] hover:bg-[#C9A84C08]",
+                      "transition-all duration-200"
+                    )}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" strokeWidth={2} />
+                    Repetir este corte
+                  </motion.button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

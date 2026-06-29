@@ -12,55 +12,53 @@ import {
 import { cn } from "@/lib/utils";
 import { BARBEARIA, mascaraTelefone } from "@/data/agendamento-dados";
 
-/* ── Mock auth (localStorage) ───────────────────────────────────── */
+/*
+ * ── Sessão do cliente (cache em localStorage) ────────────────────
+ *
+ * O localStorage funciona APENAS como cache de exibição (nome, whatsapp)
+ * para componentes síncronos como Navbar e HeroSection.
+ *
+ * A autenticação real é baseada no cookie HttpOnly "inspire_cliente_token"
+ * (JWT HS256 assinado pelo servidor). Operações sensíveis (histórico,
+ * fidelidade) são sempre validadas server-side via JWT — nunca via estes
+ * dados em localStorage.
+ */
 
-interface MockUser {
-  nome: string;
-  whatsapp: string;   // apenas dígitos
-  password: string;
-  nascimento: string; // YYYY-MM-DD
-  criadoEm: string;
-}
-
-const USERS_KEY   = "inspire_barber_users";
 const SESSION_KEY = "inspire_barber_session";
 
-function getUsers(): MockUser[] {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) ?? "[]"); }
-  catch { return []; }
+export interface SessionData {
+  nome:     string;
+  whatsapp: string;
 }
 
-function findUser(whatsapp: string, password: string): MockUser | null {
-  const digits = whatsapp.replace(/\D/g, "");
-  return getUsers().find((u) => u.whatsapp === digits && u.password === password) ?? null;
+/** Cache local para exibição em UI síncronos (Navbar, HeroSection). */
+export function saveSession(user: SessionData): void {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ nome: user.nome, whatsapp: user.whatsapp }));
+  } catch { /* SSR ou localStorage bloqueado */ }
 }
 
-function userExists(whatsapp: string): boolean {
-  const digits = whatsapp.replace(/\D/g, "");
-  return getUsers().some((u) => u.whatsapp === digits);
+/** Remove o cache local. Cookie HttpOnly é removido via /api/cliente/logout. */
+export function clearSession(): void {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
 }
 
-function registerUser(data: Omit<MockUser, "criadoEm">): MockUser {
-  const user: MockUser = { ...data, criadoEm: new Date().toISOString() };
-  const users = getUsers();
-  users.push(user);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  return user;
-}
-
-export function saveSession(user: Pick<MockUser, "nome" | "whatsapp">) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ nome: user.nome, whatsapp: user.whatsapp }));
-}
-
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-export function getSession(): Pick<MockUser, "nome" | "whatsapp"> | null {
+/** Lê o cache local. Pode ser null mesmo com cookie válido (em SSR ou após reload). */
+export function getSession(): SessionData | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as SessionData) : null;
   } catch { return null; }
+}
+
+/**
+ * Faz logout completo: remove o cookie HttpOnly via API e limpa o cache.
+ * Use este helper em todos os botões "Sair" para garantir que ambos sejam
+ * limpos. A chamada à API é best-effort (nunca bloqueia o logout local).
+ */
+export async function logoutCliente(): Promise<void> {
+  try { await fetch("/api/cliente/logout", { method: "POST" }); } catch {}
+  clearSession();
 }
 
 /* ── Variantes de animação ──────────────────────────────────────── */
@@ -79,6 +77,15 @@ const tabVariants = {
 
 type Tab = "login" | "cadastro";
 
+/** Shape da resposta da API de login/cadastro */
+interface AuthApiResponse {
+  ok:               boolean;
+  nome:             string;
+  whatsapp:         string;
+  cortes_fidelidade?: number;
+  error?:           string;
+}
+
 /* ── Componente principal ───────────────────────────────────────── */
 
 export function AuthScreen() {
@@ -87,9 +94,18 @@ export function AuthScreen() {
   const [dir, setDir]   = useState(1);
   const [globalMsg, setGlobalMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  /* Redireciona se já estiver autenticado */
+  /*
+   * Redireciona se já tiver cookie de sessão válido.
+   * Usa /api/cliente/me (verifica o JWT) em vez de localStorage para
+   * garantir que sessões expiradas não mantenham o usuário na tela.
+   */
   useEffect(() => {
-    if (getSession()) router.replace("/perfil");
+    fetch("/api/cliente/me", { credentials: "include", cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: AuthApiResponse | null) => {
+        if (data?.nome) router.replace("/perfil");
+      })
+      .catch(() => {});
   }, [router]);
 
   const switchTab = (next: Tab) => {
@@ -98,8 +114,9 @@ export function AuthScreen() {
     setGlobalMsg(null);
   };
 
-  const handleSuccess = (user: MockUser) => {
-    saveSession(user);
+  const handleSuccess = (user: AuthApiResponse) => {
+    /* Salva no localStorage como cache de exibição para Navbar/HeroSection */
+    saveSession({ nome: user.nome, whatsapp: user.whatsapp });
     setGlobalMsg({ type: "success", text: `Bem-vindo, ${user.nome.split(" ")[0]}! Redirecionando...` });
     setTimeout(() => router.push("/perfil"), 1400);
   };
@@ -266,7 +283,7 @@ function LoginForm({
   onError,
   onSwitchTab,
 }: {
-  onSuccess: (user: MockUser) => void;
+  onSuccess: (user: AuthApiResponse) => void;
   onError: (msg: string) => void;
   onSwitchTab: () => void;
 }) {
@@ -280,22 +297,29 @@ function LoginForm({
   const errPhone = touched.whatsapp && digits.length < 11;
   const errPw    = touched.password && password.length < 6;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({ whatsapp: true, password: true });
     if (digits.length < 11 || password.length < 6) return;
 
     setLoading(true);
-    /* Simula latência de rede (600 ms) */
-    setTimeout(() => {
-      const user = findUser(whatsapp, password);
-      setLoading(false);
-      if (user) {
-        onSuccess(user);
+    try {
+      const res  = await fetch("/api/cliente/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ whatsapp: digits, password }),
+      });
+      const json = await res.json() as AuthApiResponse;
+      if (!res.ok) {
+        onError(json.error ?? "WhatsApp ou senha incorretos.");
       } else {
-        onError("WhatsApp ou senha incorretos. Verifique e tente novamente.");
+        onSuccess(json);
       }
-    }, 600);
+    } catch {
+      onError("Erro de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEsqueciSenha = () => {
@@ -373,7 +397,7 @@ function CadastroForm({
   onError,
   onSwitchTab,
 }: {
-  onSuccess: (user: MockUser) => void;
+  onSuccess: (user: AuthApiResponse) => void;
   onError: (msg: string) => void;
   onSwitchTab: () => void;
 }) {
@@ -409,24 +433,30 @@ function CadastroForm({
   const maxDate = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
     .toISOString().slice(0, 10);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({ nome: true, whatsapp: true, nasc: true, password: true, confirmPw: true });
 
     if (!nomeOk || digits.length < 11 || !nasc || password.length < 6 || password !== confirmPw) return;
 
-    if (userExists(whatsapp)) {
-      onError("Este WhatsApp já está cadastrado. Faça login ou recupere sua senha.");
-      return;
-    }
-
     setLoading(true);
-    setTimeout(() => {
-      const user = registerUser({
-        nome: nome.trim(), whatsapp: digits, password, nascimento: nasc,
+    try {
+      const res  = await fetch("/api/cliente/cadastro", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ nome: nome.trim(), whatsapp: digits, password, nascimento: nasc }),
       });
-      onSuccess(user);
-    }, 700);
+      const json = await res.json() as AuthApiResponse;
+      if (!res.ok) {
+        onError(json.error ?? "Erro ao criar conta. Tente novamente.");
+      } else {
+        onSuccess(json);
+      }
+    } catch {
+      onError("Erro de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

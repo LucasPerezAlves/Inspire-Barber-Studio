@@ -6,12 +6,12 @@ import { UserRound, Loader2, WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { getSupabaseClient, supabaseConfigurado } from "@/lib/supabase";
+import { type Profissional, PROFISSIONAIS } from "@/data/agendamento-dados";
 
 /* STORAGE_BASE é computado dentro de getFotoSrc() para garantir
    que process.env seja lido em runtime, não em module-load time. */
 
 function getFotoSrc(foto: string | null): string | null {
-  /* Lê a env var em tempo de chamada — seguro no Vercel Runtime */
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   if (!foto || !supabaseUrl) return null;
   if (foto.startsWith("https://") || foto.startsWith("http://")) return foto;
@@ -22,26 +22,19 @@ function getFotoSrc(foto: string | null): string | null {
   return `${storageBase}/${foto}`;
 }
 
-interface Profissional {
-  id: string;
-  nome: string;
-  especialidade: string;
-  foto: string | null;
-}
-
-const QUALQUER: Profissional = {
-  id: "qualquer",
-  nome: "Qualquer Profissional",
-  especialidade: "Próximo disponível",
-  foto: null,
-};
+/* QUALQUER reutiliza o mesmo objeto da lista estática para garantir
+   que o id "qualquer" seja idêntico ao registrado no estado pai.  */
+const QUALQUER: Profissional = PROFISSIONAIS[0];
 
 interface EtapaProfissionalProps {
   profissionalId: string;
   onSelecionar: (id: string) => void;
+  /** Callback para elevar a lista real (Supabase) ao componente pai.
+      O pai usa essa lista para resolver o nome do profissional no resumo. */
+  onListaCarregada: (lista: Profissional[]) => void;
 }
 
-export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfissionalProps) {
+export function EtapaProfissional({ profissionalId, onSelecionar, onListaCarregada }: EtapaProfissionalProps) {
   const [profissionais, setProfissionais] = useState<Profissional[]>([QUALQUER]);
   const [carregando,    setCarregando]    = useState(true);
   const [erro,          setErro]          = useState<string | null>(null);
@@ -83,7 +76,11 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
         foto:          p.foto_url ?? null,
       }));
 
-      setProfissionais([QUALQUER, ...lista]);
+      const listaCompleta = [QUALQUER, ...lista];
+      setProfissionais(listaCompleta);
+      /* Eleva a lista real ao pai para que o resumo resolva o nome
+         correto sem depender da lista estática de agendamento-dados. */
+      onListaCarregada(listaCompleta);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[EtapaProfissional] Erro de rede:", msg);
