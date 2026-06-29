@@ -52,7 +52,13 @@ export function EtapaProfissional({ profissionalId, onSelecionar }: EtapaProfiss
     setErro(null);
 
     if (!supabaseConfigurado()) {
-      console.error("[EtapaProfissional] Supabase não configurado — verifique .env.local");
+      /* Log de diagnóstico no browser devtools — nunca exibe valores reais */
+      console.error(
+        "[EtapaProfissional] Supabase não configurado. Presença das vars:\n" +
+        `  NEXT_PUBLIC_SUPABASE_URL:             ${!!process.env.NEXT_PUBLIC_SUPABASE_URL}\n` +
+        `  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${!!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}\n` +
+        `  NEXT_PUBLIC_SUPABASE_ANON_KEY:        ${!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+      );
       setErro("Configuração incompleta. Contate o suporte.");
       setCarregando(false);
       return;

@@ -4,6 +4,7 @@ import { HeroSection }    from "@/components/sections/HeroSection";
 import { ServicesSection } from "@/components/sections/ServicesSection";
 import { BrandTicker }    from "@/components/sections/BrandTicker";
 import { TeamSection }    from "@/components/sections/TeamSection";
+import { GallerySection } from "@/components/sections/GallerySection";
 import { AboutSection }   from "@/components/sections/AboutSection";
 
 export default function Home() {
@@ -21,10 +22,13 @@ export default function Home() {
       {/* 03 — Equipe com hover overlay */}
       <TeamSection />
 
-      {/* 04 — Sobre */}
+      {/* 04 — Galeria de projetos e referências */}
+      <GallerySection />
+
+      {/* 05 — Sobre */}
       <AboutSection />
 
-      {/* 05 — Agendamento */}
+      {/* 06 — Agendamento */}
       <section
         id="agendamento"
         className="relative bg-[#0B0B0B] py-24 lg:py-32 overflow-hidden"
@@ -33,7 +37,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
           <span className="block font-mono text-[10px] tracking-[0.42em] uppercase text-[#C9A84C] mb-6">
-            05 — Agendamento
+            06 — Agendamento
           </span>
 
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light text-[#F0EDE8] mt-2 mb-5 leading-[0.95]">
